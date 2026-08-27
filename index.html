@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>PRUDENCE</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
       :root {
         color: #e5e2e1;
@@ -154,7 +153,6 @@
         position: relative;
       }
 
-      
       .left {
         display: flex;
         flex-direction: column;
@@ -165,7 +163,6 @@
         overflow: hidden;
       }
 
-      
       .right {
         width: 380px;
         background: #0b0f13;
@@ -508,6 +505,133 @@
           rgba(255,255,255,.08);
         background-size: 18px 18px;
         box-shadow: 0 0 70px rgba(255,255,255,.14), inset 0 0 0 1px rgba(255,255,255,.16);
+      }
+
+      .chat-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 440px;
+        max-width: 90vw;
+        background: rgba(14, 22, 38, 0.95);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: -10px 0 50px rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .chat-sidebar.closed {
+        transform: translateX(100%);
+      }
+      .chat-header {
+        padding: 18px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .chat-header-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .chat-header-sub {
+        font-size: 11px;
+        color: #34d399;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .chat-msg {
+        max-width: 85%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 13.5px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .chat-msg.user {
+        align-self: flex-end;
+        background: #2563eb;
+        color: #ffffff;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      }
+      .chat-msg.ai {
+        align-self: flex-start;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e2e8f0;
+        border-bottom-left-radius: 4px;
+      }
+      .chat-input-area {
+        padding: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.2);
+        display: flex;
+        gap: 8px;
+      }
+      .chat-input-area input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 12px 16px;
+        color: #ffffff;
+        font-size: 13.5px;
+        outline: none;
+      }
+      .chat-input-area input:focus {
+        border-color: #3b82f6;
+      }
+      .chat-input-area button {
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0 18px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .chat-suggestions {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 8px 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .chat-chip {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #cbd5e1;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 11px;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .chat-chip:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.4);
+        color: #ffffff;
       }
 
       .plan .outer,
@@ -1323,28 +1447,6 @@
         background: rgba(255,255,255,0.1);
         align-self: flex-start;
       }
-      .chat-msg.ai table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 8px 0;
-        font-size: 0.9em;
-      }
-      .chat-msg.ai th, .chat-msg.ai td {
-        border: 1px solid rgba(255,255,255,0.2);
-        padding: 6px 8px;
-        text-align: left;
-      }
-      .chat-msg.ai th {
-        background: rgba(255,255,255,0.1);
-        font-weight: 600;
-      }
-      .chat-msg.ai p {
-        margin: 4px 0;
-      }
-      .chat-msg.ai ul, .chat-msg.ai ol {
-        margin: 4px 0;
-        padding-left: 20px;
-      }
       .chat-input-area {
         padding: 15px;
         border-top: 1px solid rgba(255,255,255,0.1);
@@ -1877,30 +1979,33 @@
           
 
           <!-- AI Chat Sidebar -->
-          <div id="chat-sidebar" class="chat-sidebar" style="display:none !important;">
+          <div id="chat-sidebar" class="chat-sidebar closed" style="display:none;">
             <div class="chat-header">
-              <span>💬 AI Assistant</span>
-              <span class="close-btn" onclick="toggleChat()">✕</span>
+              <div>
+                <div class="chat-header-title">✨ PRUDENCE AI Assistant</div>
+                <div class="chat-header-sub"><span>●</span> Grounded in active blueprint</div>
+              </div>
+              <span class="close-btn" onclick="toggleChat()" style="cursor:pointer; font-size:18px; color:rgba(255,255,255,0.6);">✕</span>
             </div>
             <div id="chat-messages" class="chat-messages">
-              <div class="chat-msg ai">Hello! Ask me anything about this blueprint.</div>
+              <div class="chat-msg ai">Hello! I am PRUDENCE AI. Ask me anything about this blueprint, building bylaws, or violation mitigation steps.</div>
+            </div>
+            <div class="chat-suggestions">
+              <span class="chat-chip" onclick="sendChatMessage('Summary of violations')">Summary of violations</span>
+              <span class="chat-chip" onclick="sendChatMessage('How to fix rear setback?')">How to fix rear setback?</span>
+              <span class="chat-chip" onclick="sendChatMessage('Explain NBC fire rules')">Explain NBC fire rules</span>
             </div>
             <div class="chat-input-area">
-              <input type="text" id="chat-input" placeholder="Ask a question..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+              <input type="text" id="chat-input" placeholder="Ask PRUDENCE about setback, FSI, NBC rules..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+              <button type="button" onclick="sendChatMessage()">Send</button>
             </div>
           </div>
 
       </main>
 
     <script>
-      function toggleChat() {
-        if (window.state && window.state.analysis) {
-          localStorage.setItem('prudence_analysis', JSON.stringify(window.state.analysis));
-        }
-        window.open('/chat.html', '_blank', 'width=1000,height=800');
-      }
       (function () {
-        var state = window.state = {
+        var state = {
           file: null,
           previewUrl: "",
           annotations: true,
@@ -2032,22 +2137,14 @@
               parking: "Pending",
               cadOverlay: "Work in progress"
             },
-            ruleResults: [
-              { status: "Fail", pack: "Setbacks", title: "Boundary Setback Deficit", required: "6.0 m", current: "4.2 m" },
-              { status: "Fail", pack: "Parking", title: "Parking Space Deficit", required: "24 Units", current: "18 Units" },
-              { status: "Review", pack: "Fire", title: "Fire Safety Clearance", required: "Refuge area access width falls short of NBC 2016 standards by 0.3 m." }
-            ],
-            ruleSummary: { checked: 3, pass: 0, fail: 2, missing: 0, review: 1, textCharacters: 0 },
+            ruleResults: [],
+            ruleSummary: { checked: 0, pass: 0, fail: 0, missing: 0, review: 0, textCharacters: 0 },
             rulePacks: [],
-            annotations: [
-              { x: 25, y: 40, label: "CRITICAL", title: "Boundary Setback Deficit", required: "6.0 m", current: "4.2 m" },
-              { x: 60, y: 60, label: "MAJOR", title: "Parking Space Deficit", required: "24 Units", current: "18 Units" },
-              { x: 15, y: 20, label: "MINOR", title: "Fire Safety Clearance", required: "Refuge area access width falls short of NBC 2016 standards by 0.3 m." }
-            ],
+            annotations: [],
             violations: [
-              { severity: "CRITICAL", title: "Boundary Setback Deficit", required: "6.0 m", found: "4.2 m", delta: "1.8 m", annotation: { x: 25, y: 40 } },
-              { severity: "MAJOR", title: "Parking Space Deficit", required: "24 Units", found: "18 Units", delta: "6 Units", annotation: { x: 60, y: 60 } },
-              { severity: "MINOR", title: "Fire Safety Clearance", note: "Refuge area access width falls short of NBC 2016 standards by 0.3 m.", annotation: { x: 15, y: 20 } }
+              { severity: "CRITICAL", title: "Boundary Setback Deficit", required: "6.0 m", found: "4.2 m", delta: "1.8 m" },
+              { severity: "MAJOR", title: "Parking Space Deficit", required: "24 Units", found: "18 Units", delta: "6 Units" },
+              { severity: "MINOR", title: "Fire Safety Clearance", note: "Refuge area access width falls short of NBC 2016 standards by 0.3 m." }
             ]
           };
         }
@@ -2578,10 +2675,58 @@
         // --- AI FEATURES LOGIC ---
         var chatHistory = [];
         window.toggleChat = function() {
-          if (state && state.analysis) {
-            localStorage.setItem('prudence_analysis', JSON.stringify(state.analysis));
+          var sidebar = document.getElementById("chat-sidebar");
+          if (!sidebar) return;
+          if (sidebar.classList.contains("closed") || sidebar.style.display === "none") {
+            sidebar.style.display = "flex";
+            setTimeout(function() { sidebar.classList.remove("closed"); }, 10);
+          } else {
+            sidebar.classList.add("closed");
+            setTimeout(function() { sidebar.style.display = "none"; }, 300);
           }
-          window.open('/chat.html', '_blank');
+        };
+
+        window.sendChatMessage = function(overrideText) {
+          var input = document.getElementById("chat-input");
+          var text = overrideText || (input ? input.value : "");
+          if (!text || !text.trim()) return;
+          if (input) input.value = "";
+
+          var msgBox = document.getElementById("chat-messages");
+          if (!msgBox) return;
+
+          var userDiv = document.createElement("div");
+          userDiv.className = "chat-msg user";
+          userDiv.textContent = text;
+          msgBox.appendChild(userDiv);
+          msgBox.scrollTop = msgBox.scrollHeight;
+
+          var loadingDiv = document.createElement("div");
+          loadingDiv.className = "chat-msg ai";
+          loadingDiv.textContent = "PRUDENCE AI is analyzing blueprint rules...";
+          msgBox.appendChild(loadingDiv);
+          msgBox.scrollTop = msgBox.scrollHeight;
+
+          chatHistory.push({ role: "user", content: text });
+
+          fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: text,
+              history: chatHistory,
+              analysis: state ? state.analysis : {}
+            })
+          })
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            loadingDiv.textContent = data.response || "No response generated.";
+            chatHistory.push({ role: "assistant", content: data.response });
+            msgBox.scrollTop = msgBox.scrollHeight;
+          })
+          .catch(function(err) {
+            loadingDiv.textContent = "Error communicating with PRUDENCE AI service.";
+          });
         };
 
         var is3D = false;
@@ -2665,77 +2810,123 @@
         }
 
         function generate3DFromDrawing() {
-          var buildingGroup = new THREE.Group();
-          
-          var matLine = new THREE.LineBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.8, linewidth: 2 });
-          var matSolid = new THREE.MeshBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.05, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
-          var matCore = new THREE.MeshBasicMaterial({ color: 0x0088ff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+          var previewEl = document.getElementById("preview");
+          if (!previewEl) return;
 
-          var floors = 8;
-          var w = 120;
-          var h = 180;
-          var fH = 20; // floor height
+          var sourceEl = previewEl.querySelector("canvas") || previewEl.querySelector("img");
 
-          for(var i = 0; i < floors; i++) {
-            // Floor slab
-            var slabGeo = new THREE.BoxGeometry(w, h, 2);
-            var slabLine = new THREE.LineSegments(new THREE.EdgesGeometry(slabGeo), matLine);
-            var slabMesh = new THREE.Mesh(slabGeo, matSolid);
-            slabLine.position.z = i * fH;
-            slabMesh.position.z = i * fH;
-            buildingGroup.add(slabLine);
-            buildingGroup.add(slabMesh);
-            
-            if (i < floors - 1) {
-               // Internal columns
-               var colPos = [
-                 [-w/2 + 10, -h/2 + 10], [w/2 - 10, -h/2 + 10],
-                 [-w/2 + 10, h/2 - 10], [w/2 - 10, h/2 - 10]
-               ];
-               colPos.forEach(function(cp) {
-                 var colGeo = new THREE.BoxGeometry(4, 4, fH);
-                 var colLine = new THREE.LineSegments(new THREE.EdgesGeometry(colGeo), matLine);
-                 colLine.position.set(cp[0], cp[1], i * fH + fH/2);
-                 buildingGroup.add(colLine);
-               });
-               
-               // Central elevator core
-               var coreGeo = new THREE.BoxGeometry(30, 40, fH);
-               var coreLine = new THREE.LineSegments(new THREE.EdgesGeometry(coreGeo), matLine);
-               var coreMesh = new THREE.Mesh(coreGeo, matCore);
-               coreLine.position.set(0, 0, i * fH + fH/2);
-               coreMesh.position.set(0, 0, i * fH + fH/2);
-               buildingGroup.add(coreLine);
-               buildingGroup.add(coreMesh);
-               
-               // Exterior diagonal bracing (sci-fi tech look)
-               if (i % 2 === 0) {
-                 var braceGeo = new THREE.BufferGeometry().setFromPoints([
-                   new THREE.Vector3(-w/2, -h/2, i*fH), new THREE.Vector3(0, -h/2, i*fH + fH*2),
-                   new THREE.Vector3(w/2, -h/2, i*fH), new THREE.Vector3(0, -h/2, i*fH + fH*2),
-                   new THREE.Vector3(-w/2, h/2, i*fH), new THREE.Vector3(0, h/2, i*fH + fH*2),
-                   new THREE.Vector3(w/2, h/2, i*fH), new THREE.Vector3(0, h/2, i*fH + fH*2)
-                 ]);
-                 var braceLine = new THREE.LineSegments(braceGeo, matLine);
-                 buildingGroup.add(braceLine);
-               }
+          // Create holographic texture from drawing
+          var texCanvas = document.createElement("canvas");
+          texCanvas.width = 512;
+          texCanvas.height = 512;
+          var ctx = texCanvas.getContext("2d");
+
+          if (sourceEl) {
+            ctx.filter = "invert(1) hue-rotate(160deg) saturate(3)";
+            ctx.drawImage(sourceEl, 0, 0, 512, 512);
+            ctx.filter = "none";
+          } else {
+            // Fallback: draw a grid
+            ctx.fillStyle = "#001a1a";
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.strokeStyle = "#00f3ff";
+            ctx.lineWidth = 1;
+            for (var gi = 0; gi < 512; gi += 32) {
+              ctx.beginPath(); ctx.moveTo(gi, 0); ctx.lineTo(gi, 512); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(0, gi); ctx.lineTo(512, gi); ctx.stroke();
             }
           }
-          
-          holoScene.add(buildingGroup);
-          window.buildingGroup = buildingGroup;
-          holoScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+          var tex = new THREE.CanvasTexture(texCanvas);
+          tex.needsUpdate = true;
+
+          // Stack 3 transparent grid planes (no 2D image plan, as requested)
+          var zPositions = [0, 15, 30];
+          zPositions.forEach(function(z, i) {
+            var grid = new THREE.GridHelper(120, 24, 0x00f3ff, 0x003344);
+            grid.rotation.x = Math.PI / 2;
+            grid.position.z = z;
+            grid.material.transparent = true;
+            grid.material.opacity = 0.5 - (i * 0.15);
+            holoScene.add(grid);
+            
+            // Add a subtle solid glass plane
+            var planeGeo = new THREE.PlaneGeometry(120, 120);
+            var mat = new THREE.MeshBasicMaterial({
+              color: 0x001a1a,
+              transparent: true,
+              opacity: 0.2 - (i * 0.05),
+              side: THREE.DoubleSide,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false
+            });
+            var mesh = new THREE.Mesh(planeGeo, mat);
+            mesh.position.z = z;
+            holoScene.add(mesh);
+          });
+
+          // Extrude rooms from DOM
+          var rooms = [
+            { id: "room-a", color: 0x00f3ff },
+            { id: "room-b", color: 0x00f3ff },
+            { id: "room-c", color: 0x00f3ff },
+            { id: "room-d", color: 0x00f3ff },
+            { id: "room-e", color: 0x00f3ff },
+            { id: "core",   color: 0xff6600 },
+            { id: "stair",  color: 0xff6600 }
+          ];
+          var plan = previewEl.querySelector(".plan");
+          if (plan) {
+            var planRect = plan.getBoundingClientRect();
+            rooms.forEach(function(room) {
+              var el = plan.querySelector("." + room.id);
+              if (!el) return;
+              var r = el.getBoundingClientRect();
+              var cx = ((r.left + r.width / 2) - planRect.left) / planRect.width * 120 - 60;
+              var cy = ((r.top + r.height / 2) - planRect.top) / planRect.height * 120 - 60;
+              var rw = r.width / planRect.width * 120;
+              var rh = r.height / planRect.height * 120;
+              var boxHeight = 25 + Math.random() * 15;
+              var geo = new THREE.BoxGeometry(rw, rh, boxHeight);
+              var edges = new THREE.EdgesGeometry(geo);
+              var lineMat = new THREE.LineBasicMaterial({ color: room.color, transparent: true, opacity: 0.85 });
+              var wireframe = new THREE.LineSegments(edges, lineMat);
+              wireframe.position.set(cx, -cy, boxHeight / 2);
+              holoScene.add(wireframe);
+            });
+          }
+
+          // Violation markers
+          if (state && state.analysis && state.analysis.violations) {
+            state.analysis.violations.forEach(function(v, idx) {
+              var angle = (idx / 3) * Math.PI * 2;
+              var px = Math.cos(angle) * 35;
+              var py = Math.sin(angle) * 25;
+              var markerGeo = new THREE.SphereGeometry(2, 16, 16);
+              var markerMat = new THREE.MeshBasicMaterial({
+                color: v.severity === "CRITICAL" ? 0xff0000 : v.severity === "MAJOR" ? 0xff8800 : 0xffff00,
+                transparent: true,
+                opacity: 0.9
+              });
+              var marker = new THREE.Mesh(markerGeo, markerMat);
+              marker.position.set(px, py, 45);
+              holoScene.add(marker);
+
+              // Tether line
+              var points = [new THREE.Vector3(px, py, 0), new THREE.Vector3(px, py, 45)];
+              var lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+              var lineMat2 = new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.4 });
+              holoScene.add(new THREE.Line(lineGeo, lineMat2));
+            });
+          }
+
+          // Ambient light
+          holoScene.add(new THREE.AmbientLight(0xffffff, 0.5));
         }
 
         function animateHolo() {
           holoAnimationId = requestAnimationFrame(animateHolo);
           if (holoControls) holoControls.update();
-          if (window.buildingGroup) {
-            var time = Date.now() * 0.0015;
-            window.buildingGroup.position.z = Math.sin(time) * 5;
-            var scale = 1 + Math.sin(time * 2) * 0.02;
-            window.buildingGroup.scale.set(scale, scale, scale);
-          }
           if (holoRenderer && holoScene && holoCamera) {
             holoRenderer.render(holoScene, holoCamera);
           }
@@ -2803,7 +2994,7 @@
               msgs.innerHTML += '<div class="chat-msg ai" style="color:#ef4444;">Error: ' + escapeHtml(data.error) + '</div>';
             } else {
               chatHistory.push({role: 'model', content: data.response});
-              msgs.innerHTML += '<div class="chat-msg ai">' + marked.parse(data.response) + '</div>';
+              msgs.innerHTML += '<div class="chat-msg ai">' + escapeHtml(data.response) + '</div>';
             }
             msgs.scrollTop = msgs.scrollHeight;
           })

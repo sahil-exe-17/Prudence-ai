@@ -1,5 +1,6 @@
 import {
   Bell,
+  Bot,
   CheckCircle2,
   Circle,
   Download,
@@ -9,11 +10,15 @@ import {
   Hand,
   Layers,
   Loader2,
+  MessageSquare,
   Ruler,
   Search,
+  Send,
   Settings,
   Sparkles,
+  Trash2,
   Upload,
+  User,
   X,
   ZoomIn,
   ZoomOut,
@@ -119,7 +124,46 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [is3D, setIs3D] = useState(false);
   const [dragState, setDragState] = useState({ isDragging: false, startX: 0, startY: 0, rx: 60, rz: 45 });
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
+    {
+      role: 'assistant',
+      content: 'Hello! I am PRUDENCE AI. Ask me anything about this blueprint, building bylaws, or violation mitigation steps.'
+    }
+  ]);
+  const [isSendingChat, setIsSendingChat] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleSendChatMessage = async (userText: string) => {
+    if (!userText.trim() || isSendingChat) return;
+    const newMsg = { role: 'user' as const, content: userText };
+    const updatedHistory = [...chatMessages, newMsg];
+    setChatMessages(updatedHistory);
+    setIsSendingChat(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userText,
+          history: updatedHistory.map(m => ({ role: m.role, content: m.content })),
+          analysis: analysis
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.response || 'No response generated.' }]);
+      } else {
+        setChatMessages(prev => [...prev, { role: 'assistant', content: 'Could not reach the AI chat service. Please check your backend connection.' }]);
+      }
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Connection error while communicating with PRUDENCE AI.' }]);
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
 
   const activeJurisdiction = useMemo(
     () => jurisdictions.find((item) => item.id === jurisdiction) ?? jurisdictions[0],
@@ -402,6 +446,15 @@ function App() {
                 <Sparkles size={17} />
                 <span>3D View</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setIsChatOpen((prev) => !prev)}
+                className="glass-button border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                title="AI Chat Assistant"
+              >
+                <MessageSquare size={17} />
+                <span>AI Chat</span>
+              </button>
               <button type="button" onClick={exportReport} disabled={!canAnalyze} className="glass-button disabled:opacity-40">
                 <Download size={17} />
                 <span>Export Report</span>
@@ -503,9 +556,187 @@ function App() {
         </aside>
       </main>
 
-      <button className="fixed bottom-8 right-8 z-30 flex h-20 w-20 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white shadow-[0_0_40px_rgba(255,255,255,0.18)] backdrop-blur-3xl transition hover:scale-105">
-        <Sparkles size={30} />
+      {/* Floating Action Button for AI Chat */}
+      <button
+        type="button"
+        onClick={() => setIsChatOpen((prev) => !prev)}
+        className="fixed bottom-8 right-8 z-30 flex h-16 w-16 items-center justify-center rounded-full border border-blue-400/40 bg-blue-600/30 text-blue-300 shadow-[0_0_30px_rgba(59,130,246,0.35)] backdrop-blur-2xl transition hover:scale-105 hover:bg-blue-600/40 hover:text-white"
+        title="Open AI Chat Assistant"
+      >
+        <Sparkles size={26} />
       </button>
+
+      {/* In-App AI Chat Slide-Over Drawer */}
+      <AIChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        messages={chatMessages}
+        onSend={handleSendChatMessage}
+        isSending={isSendingChat}
+        onClear={() =>
+          setChatMessages([
+            {
+              role: 'assistant',
+              content: 'Hello! I am PRUDENCE AI. Ask me anything about this blueprint, building bylaws, or violation mitigation steps.',
+            },
+          ])
+        }
+      />
+    </div>
+  );
+}
+
+function AIChatDrawer({
+  isOpen,
+  onClose,
+  messages,
+  onSend,
+  isSending,
+  onClear,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  onSend: (text: string) => void;
+  isSending: boolean;
+  onClear: () => void;
+}) {
+  const [inputText, setInputText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || isSending) return;
+    onSend(inputText);
+    setInputText('');
+  };
+
+  const suggestions = [
+    'Summary of violations',
+    'How to fix rear setback?',
+    'Explain NBC fire rules',
+    'Show parking deficit',
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
+      <div className="flex h-full w-full max-w-lg flex-col border-l border-white/15 bg-[#0e1626]/95 backdrop-blur-2xl shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400">
+              <Bot size={22} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">PRUDENCE AI Assistant</h3>
+              <p className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                Grounded in active blueprint
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClear}
+              className="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white"
+              title="Clear chat"
+            >
+              <Trash2 size={18} />
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white"
+              title="Close chat"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Messages Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.role === 'assistant' && (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400">
+                  <Bot size={16} />
+                </div>
+              )}
+
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-br-none shadow-md'
+                    : 'border border-white/10 bg-white/[0.06] text-white/90 rounded-bl-none backdrop-blur-md'
+                }`}
+              >
+                <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+              </div>
+
+              {msg.role === 'user' && (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white">
+                  <User size={16} />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {isSending && (
+            <div className="flex items-center gap-3 text-white/50 text-xs">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400">
+                <Loader2 className="animate-spin" size={16} />
+              </div>
+              <span className="animate-pulse">PRUDENCE AI is analyzing blueprint rules...</span>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Suggestion Chips */}
+        <div className="flex gap-2 overflow-x-auto px-6 py-2 border-t border-white/5 no-scrollbar">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              onClick={() => onSend(s)}
+              className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70 hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-white transition"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        {/* Input Footer */}
+        <form onSubmit={handleSubmit} className="border-t border-white/10 p-4">
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Ask PRUDENCE about setback, FSI, NBC rules..."
+              className="w-full rounded-xl border border-white/15 bg-white/[0.06] py-3 pl-4 pr-12 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none backdrop-blur-md"
+            />
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isSending}
+              className="absolute right-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-30 transition"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
