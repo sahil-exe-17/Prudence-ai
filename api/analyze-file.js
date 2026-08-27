@@ -129,6 +129,54 @@ async function openAiDocumentAnalysis(payload, fallback) {
   }
 }
 
+async function groqDocumentAnalysis(payload, fallback) {
+  const apiKey = process.env.GROQ_API_KEY || process.env.PRUDENCE_GROQ_API_KEY;
+  if (!apiKey) return fallback;
+
+  const model = process.env.PRUDENCE_GROQ_MODEL || process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
+  const prompt = [
+    "You are PRUDENCE, an Indian construction compliance agent.",
+    "Analyze uploaded construction drawing metadata and return strict JSON only.",
+    "Schema:",
+    "{\"documentName\": string, \"jurisdiction\": string, \"score\": number, \"coverage\": number, \"risk\": \"Low|Medium|High\", \"status\": string, \"summary\": string, \"extractedItems\": string[], \"plan\": {\"sheetType\": string, \"scale\": string, \"plotCoverage\": string, \"farFsi\": string, \"setbackBand\": string, \"parking\": string}, \"violations\": [{\"severity\": \"CRITICAL|MAJOR|MINOR\", \"title\": string, \"required\": string, \"found\": string, \"delta\": string, \"note\": string, \"clause\": string, \"evidence\": string, \"calculation\": string}]}",
+    `File metadata: ${JSON.stringify({ filename: payload.filename, size: payload.size, mimeType: payload.mimeType, jurisdiction: payload.jurisdiction })}`,
+  ].join(" ");
+
+  const body = {
+    model: model,
+    messages: [
+      { role: "system", content: "You output strict JSON only." },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.2,
+    max_tokens: 1000,
+    response_format: { type: "json_object" },
+  };
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) return fallback;
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content || "";
+    const parsed = stripJsonText(content);
+    return {
+      ...fallback,
+      ...parsed,
+      provider: `Groq (${model})`,
+    };
+  } catch (error) {
+    return fallback;
+  }
+}
+
 function parseBody(req) {
   if (!req.body) return {};
   if (typeof req.body === "string") {
@@ -150,7 +198,13 @@ export default async function handler(req, res) {
 
   try {
     const payload = parseBody(req);
-    const result = await openAiDocumentAnalysis(payload, analyzePayload(payload));
+    const fallback = analyzePayload(payload);
+    let result = fallback;
+    if (process.env.GROQ_API_KEY || process.env.PRUDENCE_GROQ_API_KEY) {
+      result = await groqDocumentAnalysis(payload, fallback);
+    } else {
+      result = await openAiDocumentAnalysis(payload, fallback);
+    }
     res.status(200).json(result);
   } catch (error) {
     res.status(200).json({
@@ -176,3 +230,4 @@ export default async function handler(req, res) {
     });
   }
 }
+

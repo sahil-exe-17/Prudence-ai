@@ -18,7 +18,7 @@
   - **NBC 2016 (National Building Code of India)**: Evaluates fire tender access, main entrance gate width, ramp slopes, stair/corridor clear widths, plinth heights, and building height restrictions.
   - **RERA (Real Estate Regulatory Authority)**: Verifies project registration disclosures, sanctioned plan approvals, and carpet area schedules.
 - 🎯 **Interactive Canvas Overlay**: Visual pinpoint markers and color-coded bounding boxes directly mapped onto uploaded floor plans for non-compliant zones.
-- 🤖 **Multi-Modal AI Vision Engine**: Powered by Google Gemini 3.1 Flash / NVIDIA Llama-3.2 Vision with a reliable, deterministic local rule-check fallback engine.
+- 🤖 **Multi-Modal AI Vision & LLM Engine**: Powered by Google Gemini 3.1 Flash / Groq (Llama 3.3 70B) with a reliable, deterministic local rule-check fallback engine.
 - 💬 **Interactive AI Compliance Assistant**: Context-aware AI chat interface to ask questions about specific blueprint violations, mitigation steps, and statutory clauses.
 - 📄 **Exportable PDF Reports**: One-click generation of audit reports complete with violation summaries, exact metric deficits, and corrective action recommendations.
 
@@ -37,7 +37,7 @@ Prudence-ai/
 │   ├── run.py              # Server launcher
 │   └── requirements.txt    # Backend Python dependencies
 ├── localhost/              # Standalone Python backend & server
-│   ├── server.py           # ThreadingHTTPServer with Gemini/NVIDIA AI & local engine
+│   ├── server.py           # ThreadingHTTPServer with Gemini/Groq AI & local engine
 │   ├── index.html          # Standalone client GUI
 │   ├── chat.html           # Standalone chat interface GUI
 │   └── ...                 # Static assets (PDF.js, jsPDF, branding logos)
@@ -96,7 +96,7 @@ Open `.env` and add your API keys:
 
 ```ini
 GEMINI_API_KEY=your_gemini_api_key_here
-PRUDENCE_NVIDIA_API_KEY=your_nvidia_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 ---
@@ -131,7 +131,7 @@ npm run dev
 
 The Python server (`localhost/server.py`) exposes three primary REST endpoints:
 
-- `POST /api/analyze-file`: Uploads base64-encoded PDF or image plans. Triggers Gemini/NVIDIA multimodal vision analysis or falls back to local deterministic PyMuPDF text & geometrical checks.
+- `POST /api/analyze-file`: Uploads base64-encoded PDF or image plans. Triggers Gemini / Groq AI analysis or falls back to local deterministic PyMuPDF text & geometrical checks.
 - `POST /api/analyze`: Processes structured floor plan payloads against active DCR, NBC 2016, and RERA rule packs.
 - `POST /api/chat`: Context-aware chatbot endpoint allowing interactive Q&A grounded in the active plan analysis.
 

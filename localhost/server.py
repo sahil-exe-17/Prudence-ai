@@ -1086,8 +1086,8 @@ def gemini_document_analysis(payload: dict) -> dict:
     return fallback
 
 
-def nvidia_analysis(payload: dict) -> dict:
-    api_key = os.environ.get("PRUDENCE_NVIDIA_API_KEY")
+def groq_analysis(payload: dict) -> dict:
+    api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY")
     if not api_key:
         return fallback_analysis(payload)
 
@@ -1101,16 +1101,16 @@ def nvidia_analysis(payload: dict) -> dict:
         "Use plausible Indian construction compliance checks for demo purposes."
     )
     body = {
-        "model": os.environ.get("PRUDENCE_NVIDIA_MODEL", "meta/llama-3.1-70b-instruct"),
+        "model": os.environ.get("PRUDENCE_GROQ_MODEL", "llama-3.3-70b-versatile"),
         "messages": [
             {"role": "system", "content": "You produce strict JSON only."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.2,
-        "max_tokens": 700,
+        "max_tokens": 1000,
     }
     request = urllib.request.Request(
-        os.environ.get("PRUDENCE_NVIDIA_URL", "https://integrate.api.nvidia.com/v1/chat/completions"),
+        "https://api.groq.com/openai/v1/chat/completions",
         data=json.dumps(body).encode("utf-8"),
         headers={
             "Authorization": f"Bearer {api_key}",
@@ -1127,7 +1127,8 @@ def nvidia_analysis(payload: dict) -> dict:
             content = content.strip("`")
             content = content.removeprefix("json").strip()
         parsed = json.loads(content)
-    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, json.JSONDecodeError):
+    except Exception as e:
+        print("Groq API Error:", e)
         return fallback
 
     return {
@@ -1135,28 +1136,75 @@ def nvidia_analysis(payload: dict) -> dict:
         **{key: value for key, value in parsed.items() if key in fallback},
         "documentName": parsed.get("documentName") or fallback["documentName"],
         "jurisdiction": parsed.get("jurisdiction") or fallback["jurisdiction"],
+        "provider": f"Groq ({body['model']})",
     }
 
+
+def groq_chat(payload: dict) -> dict:
+    key = os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY")
+    if not key:
+        return {"error": "GROQ_API_KEY not found"}
+
+    history = payload.get("history", [])
+    message = payload.get("message", "")
+    analysis = payload.get("analysis", {})
+
+    system_instruction = f"You are PRUDENCE, an AI architectural assistant. You help users understand their floor plans. Here is the parsed data of the current plan: {json.dumps(analysis)[:4000]}... Keep your answers concise, helpful, and friendly. IMPORTANT: Always format your responses using Markdown tables, bullet points, or other highly structured formats. Avoid long paragraphs. If a user asks a question about the plan, answer based on this context. Be professional."
+
+    messages = [{"role": "system", "content": system_instruction}]
+    for m in history:
+        role = "user" if m["role"] == "user" else "assistant"
+        messages.append({"role": role, "content": m["content"]})
+
+    messages.append({"role": "user", "content": message})
+
+    body = {
+        "model": os.environ.get("PRUDENCE_GROQ_MODEL", "llama-3.3-70b-versatile"),
+        "messages": messages,
+        "temperature": 0.4,
+        "max_tokens": 1000,
+    }
+
+    request = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        text = data["choices"][0]["message"]["content"]
+        return {"response": text}
+    except Exception as e:
+        print("Groq Chat Error:", e)
+        return {"error": str(e)}
 
 
 def gemini_chat(payload: dict) -> dict:
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
+        if os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY"):
+            return groq_chat(payload)
         return {"error": "GEMINI_API_KEY not found"}
-    
+
     history = payload.get("history", [])
     message = payload.get("message", "")
     analysis = payload.get("analysis", {})
-    
+
     system_instruction = f"You are PRUDENCE, an AI architectural assistant. You help users understand their floor plans. Here is the parsed data of the current plan: {json.dumps(analysis)[:4000]}... Keep your answers concise, helpful, and friendly. IMPORTANT: Always format your responses using Markdown tables, bullet points, or other highly structured formats. Avoid long paragraphs. If a user asks a question about the plan, answer based on this context. Be professional."
-    
+
     messages = []
     for m in history:
         role = "user" if m["role"] == "user" else "model"
         messages.append({"role": role, "parts": [{"text": m["content"]}]})
-        
+
     messages.append({"role": "user", "parts": [{"text": message}]})
-    
+
     body = {
         "contents": messages,
         "systemInstruction": {
@@ -1167,7 +1215,7 @@ def gemini_chat(payload: dict) -> dict:
             "maxOutputTokens": 1000
         }
     }
-    
+
     model = "gemini-3.1-flash-lite"
     request = urllib.request.Request(
         f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}",
@@ -1177,7 +1225,7 @@ def gemini_chat(payload: dict) -> dict:
         },
         method="POST"
     )
-    
+
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
             data = json.loads(response.read().decode("utf-8"))
@@ -1187,7 +1235,10 @@ def gemini_chat(payload: dict) -> dict:
         print("Gemini Chat Error:", e)
         if hasattr(e, 'read'):
             print(e.read().decode())
+        if os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY"):
+            return groq_chat(payload)
         return {"error": str(e)}
+
 
 class Handler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: object) -> None:
@@ -1218,11 +1269,27 @@ class Handler(SimpleHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
         except json.JSONDecodeError:
             payload = {}
-        
+
         if self.path == "/api/chat":
-            result = gemini_chat(payload)
+            if os.environ.get("GEMINI_API_KEY"):
+                result = gemini_chat(payload)
+            elif os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY"):
+                result = groq_chat(payload)
+            else:
+                result = {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
         else:
-            result = gemini_document_analysis(payload) if self.path == "/api/analyze-file" else nvidia_analysis(payload)
+            if self.path == "/api/analyze-file":
+                result = gemini_document_analysis(payload)
+                if result.get("provider") == "Local fallback" and (os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY")):
+                    groq_res = groq_analysis(payload)
+                    if groq_res.get("provider") != "Local fallback":
+                        result = groq_res
+            else:
+                if os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY"):
+                    result = groq_analysis(payload)
+                else:
+                    result = gemini_document_analysis(payload)
+
             if result.get("provider") == "Local fallback":
                 result = apply_rule_checks(result, payload)
         encoded = json.dumps(result).encode("utf-8")
@@ -1238,6 +1305,7 @@ if __name__ == "__main__":
     os.chdir(ROOT)
     server = ThreadingHTTPServer(("127.0.0.1", 5174), Handler)
     print("PRUDENCE running at http://127.0.0.1:5174/")
-    print("NVIDIA API:", "enabled" if os.environ.get("PRUDENCE_NVIDIA_API_KEY") else "not configured")
     print("Gemini API:", "enabled" if os.environ.get("GEMINI_API_KEY") else "not configured")
+    print("Groq API:", "enabled" if (os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY")) else "not configured")
     server.serve_forever()
+
