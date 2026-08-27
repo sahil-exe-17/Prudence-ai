@@ -1,0 +1,13 @@
+{
+  "name": "prudence-compliance-engine",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "vite": "^7.1.7",
+    "typescript": "~5.9.3"
+  }
+}

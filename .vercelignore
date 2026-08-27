@@ -1,0 +1,11 @@
+.env
+.python/
+.venv/
+node_modules/
+localhost/
+backend/
+__pycache__/
+*.log
+*.pyc
+prudence-serve.err.log
+prudence-serve.out.log
