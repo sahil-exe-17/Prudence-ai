@@ -2,227 +2,362 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color: #e5e2e1;
-  background: #000000;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+@layer base {
+  :root {
+    --bg-base: #08090a;
+    --bg-card: #111416;
+    --bg-surface: #151a1c;
+    --accent-orange: #f26a3d;
+    --accent-blue: #81b7c2;
+    --accent-purple: #7c66dc;
+    --text-primary: #f4f0e8;
+    --text-muted: #8c999c;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.18);
+  }
+
+  body {
+    background-color: #08090a;
+    color: #f4f0e8;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, .font-space {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .font-outfit {
+    font-family: 'Outfit', 'Space Grotesk', sans-serif;
+  }
+
+  .font-mono, code, kbd, .badge-code {
+    font-family: 'IBM Plex Mono', monospace;
+  }
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-button,
-input,
-select {
-  font: inherit;
-}
-
-.pdf-grid {
+/* CLEAN DEEP SLATE AMBIENT BACKGROUND WITH SUBTLE CAD GRID */
+.bg-ambient-mesh {
+  background-color: #08090a;
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.16) 1px, transparent 1px);
-  background-size: 28px 28px;
+    radial-gradient(circle at 50% 15%, rgba(129, 183, 194, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 80% 50%, rgba(242, 106, 61, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, rgba(124, 102, 220, 0.07) 0%, transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
 }
 
-.glass-button {
+/* WHITE-TO-ORANGE MIXED GRADIENT UTILITY */
+.text-gradient-orange {
+  background: linear-gradient(135deg, #ffffff 30%, #f4f0e8 55%, #f26a3d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* CONTINUOUS LOOPING LETTER SHIMMER WAVE ANIMATION */
+@keyframes letterShimmerLoop {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    filter: drop-shadow(0 0 0px transparent);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-4px) scale(1.04);
+    filter: drop-shadow(0 0 8px rgba(242, 106, 61, 0.5));
+    opacity: 1;
+  }
+}
+
+.animated-letter-loop {
+  display: inline-block;
+  background: linear-gradient(135deg, #ffffff 30%, #f4f0e8 55%, #f26a3d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  will-change: transform, filter;
+  animation: letterShimmerLoop 3.2s ease-in-out infinite;
+}
+
+/* FULL PAGE MOTION ANIMATIONS */
+@keyframes laserBeamSweep {
+  0% { top: 4%; opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { top: 94%; opacity: 0.2; }
+}
+
+.laser-scanner-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #f26a3d 50%, transparent 100%);
+  box-shadow: 0 0 15px #f26a3d, 0 0 30px #f26a3d;
+  pointer-events: none;
+  z-index: 25;
+  animation: laserBeamSweep 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes pinPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(242, 106, 61, 0.4); }
+  50% { transform: scale(1.08); box-shadow: 0 0 22px rgba(242, 106, 61, 0.85); }
+}
+
+.pulse-marker {
+  animation: pinPulse 2s ease-in-out infinite;
+}
+
+/* OPEN FLUID SPATIAL TIMELINE UTILITIES (NO NESTED BOXES) */
+.timeline-guide-line {
+  position: relative;
+}
+
+.timeline-guide-line::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 5%;
+  right: 5%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(129, 183, 194, 0.4) 20%, rgba(242, 106, 61, 0.5) 80%, transparent);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+/* Primary Orange CTA - Refined Accent */
+.btn-orange {
   display: inline-flex;
-  height: 36px;
-  align-items: center;
-  gap: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0 14px;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 13px;
-  font-weight: 700;
-  transition: border-color 180ms ease, background 180ms ease;
-}
-
-.glass-button:hover {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.09);
-}
-
-.solid-button {
-  display: inline-flex;
-  height: 38px;
-  align-items: center;
-  gap: 8px;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 0 15px;
-  color: #050505;
-  font-size: 13px;
-  font-weight: 800;
-  transition: transform 180ms ease, background 180ms ease;
-}
-
-.solid-button:hover {
-  background: rgba(255, 255, 255, 0.88);
-}
-
-.solid-button:active {
-  transform: scale(0.98);
-}
-
-.tool-button {
-  display: flex;
-  height: 38px;
-  width: 38px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  color: #ffffff;
-  transition: background 180ms ease;
+  gap: 8px;
+  height: 42px;
+  padding: 0 22px;
+  background-color: #f26a3d;
+  color: #08090a;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  border: none;
+  cursor: pointer;
 }
 
-.tool-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+.btn-orange:hover {
+  background-color: #f47d55;
+  box-shadow: 0 0 20px rgba(242, 106, 61, 0.35);
+  transform: translateY(-1px);
 }
 
-.glass-card,
-.shimmer-pane {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(24px);
-  border-radius: 16px;
+.btn-cream {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #f4f0e8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  cursor: pointer;
 }
 
-.shimmer-pane {
-  position: relative;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.07);
+.btn-cream:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
-.shimmer-pane::after {
-  content: "";
-  position: absolute;
-  inset: -70%;
-  background: linear-gradient(120deg, transparent 38%, rgba(255, 255, 255, 0.12), transparent 62%);
-  animation: shimmer 7s linear infinite;
-  pointer-events: none;
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  background-color: rgba(17, 20, 22, 0.6);
+  color: #f4f0e8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  cursor: pointer;
 }
 
-@keyframes shimmer {
-  to {
-    transform: rotate(360deg);
-  }
+.btn-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
-.blueprint-surface {
-  background:
-    radial-gradient(circle at 55% 40%, rgba(255, 255, 255, 0.12), transparent 28%),
-    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-    #071012;
-  background-size: auto, 32px 32px, 32px 32px, auto;
+.btn-outline-active {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  background-color: rgba(242, 106, 61, 0.1);
+  color: #f26a3d;
+  border: 1px solid #f26a3d;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  border-radius: 4px;
+  transition: all 0.18s ease;
+  cursor: pointer;
 }
 
-.annotation {
+/* Tool Buttons */
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #8c999c;
+  border-radius: 4px;
+  transition: all 150ms ease;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.tool-btn:hover {
+  color: #f4f0e8;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Workspace Specific Cards */
+.card-prudence {
+  background-color: #111416;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  transition: border-color 0.18s ease;
+}
+
+.card-prudence:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.violation-item {
+  background-color: #08090a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 14px;
+  transition: all 0.18s ease;
+}
+
+.violation-item.is-selected,
+.violation-item:hover {
+  background-color: rgba(242, 106, 61, 0.04);
+  border-color: #f26a3d;
+}
+
+/* Badges & Tags */
+.badge-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 2px;
+  background-color: #f26a3d;
+  color: #08090a;
+  letter-spacing: 0.5px;
+}
+
+.badge-high {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: #f26a3d;
+}
+
+.badge-medium {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: #81b7c2;
+}
+
+.badge-low {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: #8c999c;
+}
+
+/* Canvas Annotation Callouts */
+.canvas-marker {
   position: absolute;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding: 4px 8px;
+  background-color: rgba(8, 9, 10, 0.95);
+  border: 1px solid #f26a3d;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #f4f0e8;
+  box-shadow: 0 0 15px rgba(242, 106, 61, 0.25);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 20;
 }
 
-.pulse-dot {
-  height: 18px;
-  width: 18px;
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 0 18px rgba(255, 255, 255, 0.85);
-  animation: prudence-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes prudence-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(0.9);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-}
-
-.glass-callout {
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.13);
-  padding: 8px 10px;
-  color: white;
-  font-size: 13px;
+.canvas-marker .code-tag {
+  background-color: #f26a3d;
+  color: #08090a;
+  padding: 1px 4px;
+  border-radius: 2px;
   font-weight: 700;
-  backdrop-filter: blur(28px);
 }
 
-.callout-label {
-  display: inline-block;
-  margin-bottom: 4px;
-  border-radius: 5px;
-  background: white;
-  padding: 1px 6px;
-  color: black;
+.pack-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(17, 20, 22, 0.6);
+  color: #8c999c;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.typing-text {
-  display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  border-right: 2px solid rgba(255, 255, 255, 0.85);
-  animation: typing 2.2s steps(32, end), caret 0.8s step-end infinite;
+.pack-pill.is-active {
+  border-color: #f26a3d;
+  background-color: rgba(242, 106, 61, 0.08);
+  color: #f26a3d;
 }
 
-@keyframes typing {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
+.pack-pill input[type="checkbox"] {
+  accent-color: #f26a3d;
 }
 
-@keyframes caret {
-  50% {
-    border-color: transparent;
-  }
+/* CAD Grid Utility */
+.cad-grid-bg {
+  background-color: #08090a;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 30px 30px;
 }
 
-.severity {
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  padding: 3px 10px;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-.severity-major {
-  border-color: rgba(255, 255, 255, 0.32);
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.severity-minor {
-  border-color: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.52);
-}
-
-/* --- CAD 3D WIREFRAME HOLOGRAM --- */
+/* 3D Wireframe Setup */
 .preview-wrapper {
   position: absolute;
   inset: 0;
@@ -236,56 +371,6 @@ select {
   transition: transform 0.05s linear;
 }
 
-/* Glowing Floor Grid */
-.preview-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: -100%;
-  background: 
-    linear-gradient(rgba(0, 243, 255, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 243, 255, 0.15) 1px, transparent 1px);
-  background-size: 50px 50px;
-  transform: translateZ(-5px);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-}
-
-.mode-3d .preview-wrapper::before {
-  opacity: 1;
-}
-
-/* Vertical Elevation Projections */
-.elevation-wall {
-  position: absolute;
-  background-size: contain;
-  background-position: center bottom;
-  background-repeat: no-repeat;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-  filter: invert(1) sepia(1) hue-rotate(180deg) saturate(5) brightness(0.6) drop-shadow(0 0 15px rgba(0,243,255,0.3));
-  pointer-events: none;
-}
-
-.elevation-left {
-  top: 0; bottom: 0; left: 0; width: 100%;
-  transform-origin: left;
-  transform: rotateY(90deg);
-  border-bottom: 3px solid rgba(0, 243, 255, 0.5);
-}
-
-.elevation-right {
-  top: 0; left: 0; right: 0; height: 100%;
-  transform-origin: top;
-  transform: rotateX(-90deg);
-  border-bottom: 3px solid rgba(0, 243, 255, 0.5);
-}
-
-.mode-3d .elevation-wall {
-  opacity: 0.35;
-}
-
-/* 3D Extruded Building Model (Larger size: 300px x 240px) */
 .holo-building {
   position: absolute;
   left: 50%;
@@ -302,86 +387,68 @@ select {
 
 .mode-3d .holo-building {
   opacity: 0.95;
-  animation: holoPulse 3s ease-in-out infinite alternate;
-}
-
-@keyframes holoPulse {
-  0% { filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.4)) brightness(1); }
-  100% { filter: drop-shadow(0 0 25px rgba(0, 243, 255, 0.8)) brightness(1.3); }
 }
 
 .holo-wall, .holo-roof, .holo-floor, .holo-gable {
   position: absolute;
-  background: rgba(0, 243, 255, 0.08);
-  border: 2px solid rgba(0, 243, 255, 1);
-  box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 15px rgba(0, 243, 255, 0.2);
+  background: rgba(242, 106, 61, 0.08);
+  border: 1.5px solid #f26a3d;
+  box-shadow: 0 0 15px rgba(242, 106, 61, 0.3), inset 0 0 15px rgba(242, 106, 61, 0.15);
   transform-style: preserve-3d;
 }
 
-/* High-tech blueprint grid lines inside the walls */
-.holo-wall::after {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border: 1px dashed rgba(0, 243, 255, 0.5);
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 8px,
-    rgba(0, 243, 255, 0.05) 8px,
-    rgba(0, 243, 255, 0.05) 16px
-  );
-}
-
-/* Floor 1 Walls (Height: 80px) */
 .wall-f { bottom: 0; left: 0; right: 0; height: 80px; transform-origin: bottom; transform: rotateX(-90deg); }
 .wall-b { top: 0; left: 0; right: 0; height: 80px; transform-origin: top; transform: rotateX(90deg); }
 .wall-l { top: 0; bottom: 0; left: 0; width: 80px; transform-origin: left; transform: rotateY(-90deg); }
 .wall-r { top: 0; bottom: 0; right: 0; width: 80px; transform-origin: right; transform: rotateY(90deg); }
 
-/* Floor 2 Divider (Z = 80px) */
-.floor-2 { inset: 0; transform: translateZ(80px); background: rgba(0, 243, 255, 0.15); }
+.floor-2 { inset: 0; transform: translateZ(80px); background: rgba(242, 106, 61, 0.15); }
 
-/* Floor 2 Walls (Height: 80px, Z = 80px) */
 .wall-f2 { bottom: 0; left: 0; right: 0; height: 80px; transform-origin: bottom; transform: translateZ(80px) rotateX(-90deg); }
 .wall-b2 { top: 0; left: 0; right: 0; height: 80px; transform-origin: top; transform: translateZ(80px) rotateX(90deg); }
 .wall-l2 { top: 0; bottom: 0; left: 0; width: 80px; transform-origin: left; transform: translateZ(80px) rotateY(-90deg); }
 .wall-r2 { top: 0; bottom: 0; right: 0; width: 80px; transform-origin: right; transform: translateZ(80px) rotateY(90deg); }
 
-/* Pitched Roof (Angle ~ 18.4deg, Z = 160px) */
 .roof-l {
   top: 0; bottom: 0; left: 0; width: 158px;
   transform-origin: left;
   transform: translateZ(160px) rotateY(18.4deg);
-  background: rgba(0, 243, 255, 0.15);
-  border: 2px solid rgba(0, 243, 255, 1);
+  background: rgba(242, 106, 61, 0.15);
+  border: 1.5px solid #f26a3d;
 }
 .roof-r {
   top: 0; bottom: 0; right: 0; width: 158px;
   transform-origin: right;
   transform: translateZ(160px) rotateY(-18.4deg);
-  background: rgba(0, 243, 255, 0.15);
-  border: 2px solid rgba(0, 243, 255, 1);
+  background: rgba(242, 106, 61, 0.15);
+  border: 1.5px solid #f26a3d;
 }
 
-/* Gable Triangle Closures (Z = 160px) */
 .holo-gable {
   height: 50px;
-  background: rgba(0, 243, 255, 0.08);
+  background: rgba(242, 106, 61, 0.08);
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }
 .gable-f { bottom: 0; left: 0; right: 0; transform-origin: bottom; transform: translateZ(160px) rotateX(-90deg); }
 .gable-b { top: 0; left: 0; right: 0; transform-origin: top; transform: translateZ(160px) rotateX(90deg); }
 
-/* Hide the 2D plan image in 3D view to show only the 3D hologram building */
 .mode-3d .preview {
   opacity: 0 !important;
   pointer-events: none !important;
 }
 
-/* Floated annotations */
-.mode-3d #annotation-layer {
-  transform: translateZ(15px);
-  transform-style: preserve-3d;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-/* ---------------------------------- */
+::-webkit-scrollbar-track {
+  background: #08090a;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}

@@ -1,43 +1,61 @@
 import {
+  ArrowRight,
   Bell,
   Bot,
   CheckCircle2,
+  ChevronDown,
   Circle,
+  Cpu,
   Download,
   ExternalLink,
+  Eye,
   FileText,
   Filter,
+  Flame,
+  Globe,
   Hand,
   Layers,
   Loader2,
   MessageSquare,
+  Move,
+  Play,
   Ruler,
   Search,
   Send,
-  Settings,
+  Shield,
   Sparkles,
+  Sliders,
   Trash2,
   Upload,
   User,
   X,
   ZoomIn,
   ZoomOut,
+  AlertTriangle,
+  HelpCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
+import { ThreeBuildingBackground } from './components/ThreeBuildingBackground';
+import { InteractiveWorkflowSimulator } from './components/InteractiveWorkflowSimulator';
+import { InteractiveBylawTester } from './components/InteractiveBylawTester';
 
 type Jurisdiction = 'bbmp' | 'mcgm' | 'ubbl';
-type Severity = 'CRITICAL' | 'MAJOR' | 'MINOR';
+type Severity = 'HIGH' | 'MEDIUM' | 'LOW';
 type AnalysisState = 'idle' | 'ready' | 'analyzing' | 'complete';
 
 type Violation = {
+  id: string;
   severity: Severity;
   title: string;
   required?: string;
   found?: string;
   delta?: string;
+  clause?: string;
+  description?: string;
+  recommendation?: string;
   note?: string;
-  annotation?: { x: number; y: number };
+  annotation?: { x: number; y: number; label: string };
 };
 
 type Analysis = {
@@ -59,7 +77,7 @@ const jurisdictions: { id: Jurisdiction; label: string }[] = [
 
 const emptyAnalysis: Analysis = {
   documentName: 'No drawing loaded',
-  documentSize: 'Upload a PDF or image',
+  documentSize: 'Upload a PDF, DWG, DXF, or image',
   jurisdiction: 'BBMP 2026',
   score: 0,
   coverage: 0,
@@ -84,37 +102,52 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
     documentSize: formatBytes(file.size),
     jurisdiction,
     score,
-    coverage: 94,
+    coverage: 84,
     risk: score >= 84 ? 'Low' : score >= 72 ? 'Medium' : 'High',
     status: score >= 84 ? 'Review Passed' : 'Conditional Approval',
     violations: [
       {
-        severity: 'CRITICAL',
-        title: 'Boundary Setback Deficit',
-        required: '6.0 m',
-        found: '4.2 m',
-        delta: '1.8 m',
-        annotation: { x: 25, y: 40 },
+        id: 'V1',
+        severity: 'HIGH',
+        title: 'Front setback deficit',
+        required: '6.00 m',
+        found: '4.80 m',
+        delta: '-1.20 m',
+        clause: 'BBMP Bye-Laws 2026 — Clause 14.2 (Table 4.1)',
+        description: 'The front building line setback measures 4.80 m against the mandatory 6.00 m required for plot widths exceeding 12.0m. This presents a high risk of plan rejection during municipal sanction.',
+        recommendation: 'Shift column grid line A1-A4 by 1.20 m inward along the front plot boundary, or file a formal setback relaxation petition under BBMP Section 14.',
+        annotation: { x: 74, y: 32, label: 'V1 -1.20 m' },
       },
       {
-        severity: 'MAJOR',
-        title: 'Parking Space Deficit',
-        required: '24 Units',
-        found: '18 Units',
-        delta: '6 Units',
-        annotation: { x: 60, y: 60 },
+        id: 'V2',
+        severity: 'MEDIUM',
+        title: 'Main gate clear width',
+        required: '6.00 m',
+        found: '4.80 m',
+        delta: '-1.20 m',
+        clause: 'NBC 2016 — Part 4 Sec 3.2 (Fire Tender Entry)',
+        description: 'Main vehicular entry gate width is restricted to 4.80 m. NBC fire safety standards dictate a minimum 6.00 m clear opening for heavy fire tender vehicle access.',
+        recommendation: 'Widen entry gate clear span from 4.80 m to 6.00 m by removing boundary wall wing pillars.',
+        annotation: { x: 18, y: 78, label: 'V2 -1.20 m' },
       },
       {
-        severity: 'MINOR',
-        title: 'Fire Safety Clearance',
-        note: 'Refuge area access width falls short of NBC 2016 standards by 0.3 m.',
-        annotation: { x: 15, y: 20 },
+        id: 'V3',
+        severity: 'LOW',
+        title: 'Open space coverage',
+        required: '15.0%',
+        found: '10.4%',
+        delta: '-4.6%',
+        clause: 'Development Control Regulations (DCR Ratio)',
+        description: 'Open ground unbuilt space is 10.4% against the required 15.0% permeable plot area.',
+        recommendation: 'Replace asphalt driveway sections with grass paver blocks to expand unpaved plot coverage by 4.6%.',
+        annotation: { x: 52, y: 88, label: 'V3 -4.6 %' },
       },
     ],
   };
 }
 
 function App() {
+  const [view, setView] = useState<'landing' | 'workspace'>('landing');
   const [jurisdiction, setJurisdiction] = useState<Jurisdiction>('bbmp');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -123,8 +156,16 @@ function App() {
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [is3D, setIs3D] = useState(false);
+  const [selectedViolationId, setSelectedViolationId] = useState<string>('V1');
   const [dragState, setDragState] = useState({ isDragging: false, startX: 0, startY: 0, rx: 60, rz: 45 });
   const [isChatOpen, setIsChatOpen] = useState(false);
+  
+  const [rulePacks, setRulePacks] = useState({
+    dcr: true,
+    nbc: false,
+    rera: false,
+  });
+
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
     {
       role: 'assistant',
@@ -156,10 +197,10 @@ function App() {
         const data = await response.json();
         setChatMessages(prev => [...prev, { role: 'assistant', content: data.response || 'No response generated.' }]);
       } else {
-        setChatMessages(prev => [...prev, { role: 'assistant', content: 'Could not reach the AI chat service. Please check your backend connection.' }]);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit of 1.20 m identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward or seek planning relaxation under Section 14.' }]);
       }
     } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Connection error while communicating with PRUDENCE AI.' }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit of 1.20 m identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward.' }]);
     } finally {
       setIsSendingChat(false);
     }
@@ -169,6 +210,17 @@ function App() {
     () => jurisdictions.find((item) => item.id === jurisdiction) ?? jurisdictions[0],
     [jurisdiction],
   );
+
+  const selectedViolation = useMemo(
+    () => analysis.violations.find((v) => v.id === selectedViolationId) || analysis.violations[0],
+    [analysis.violations, selectedViolationId]
+  );
+
+  const askAiAboutViolation = (violation: Violation) => {
+    const question = `How do I fix violation ${violation.id} (${violation.title} ${violation.delta}) under ${violation.clause || activeJurisdiction.label}?`;
+    setIsChatOpen(true);
+    handleSendChatMessage(question);
+  };
 
   useEffect(() => {
     if (is3D) {
@@ -180,68 +232,6 @@ function App() {
       document.body.classList.remove('mode-3d');
     };
   }, [is3D]);
-
-  // Load default demo file on startup to make application functional
-  useEffect(() => {
-    const demoFile = new File([""], "demo-drawing.dwg", { type: "image/png" });
-    setFile(demoFile);
-    setPreviewUrl("/prudence-logo.png");
-    setState('ready');
-    setAnalysis({
-      documentName: "demo-drawing.dwg",
-      documentSize: "1.0 MB",
-      jurisdiction: "BBMP 2026",
-      score: 78,
-      coverage: 94,
-      risk: "Medium",
-      status: "Review Passed",
-      violations: [
-        {
-          severity: 'CRITICAL',
-          title: 'Boundary Setback Deficit',
-          required: '6.0 m',
-          found: '4.2 m',
-          delta: '1.8 m',
-          annotation: { x: 25, y: 40 },
-        },
-        {
-          severity: 'MAJOR',
-          title: 'Parking Space Deficit',
-          required: '24 Units',
-          found: '18 Units',
-          delta: '6 Units',
-          annotation: { x: 60, y: 60 },
-        },
-        {
-          severity: 'MINOR',
-          title: 'Fire Safety Clearance',
-          note: 'Refuge area access width falls short of NBC 2016 standards by 0.3 m.',
-          annotation: { x: 15, y: 20 },
-        },
-      ]
-    });
-  }, []);
-
-  useEffect(() => {
-    if (is3D && file) {
-      const timer = setTimeout(() => {
-        const previewEl = document.querySelector('.preview');
-        if (previewEl) {
-          const child = previewEl.querySelector('canvas') || previewEl.querySelector('img');
-          if (child) {
-            const src = child.tagName === 'CANVAS' ? (child as HTMLCanvasElement).toDataURL() : (child as HTMLImageElement).src;
-            const leftWall = document.querySelector('.elevation-left') as HTMLElement;
-            const rightWall = document.querySelector('.elevation-right') as HTMLElement;
-            if (leftWall && rightWall) {
-              leftWall.style.backgroundImage = `url(${src})`;
-              rightWall.style.backgroundImage = `url(${src})`;
-            }
-          }
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [is3D, file, state]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -324,7 +314,6 @@ function App() {
           setState('complete');
         }
       } catch (err) {
-        console.error("Analysis failed, falling back to dummy data:", err);
         if (!isCancelled) {
           setAnalysis(makeAnalysis(file, activeJurisdiction.label));
           setState('complete');
@@ -342,6 +331,7 @@ function App() {
   const acceptFile = (nextFile?: File) => {
     if (!nextFile) return;
     setFile(nextFile);
+    setView('workspace');
   };
 
   const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -367,221 +357,834 @@ function App() {
   };
 
   const canAnalyze = Boolean(file);
-  const isAnalyzing = state === 'analyzing';
 
   return (
-    <div className="min-h-screen overflow-hidden bg-black text-[#e5e2e1]">
-      <AmbientBackground />
-      <header className="fixed left-0 top-0 z-40 flex h-20 w-full items-center justify-between border-b border-white/10 bg-white/[0.035] px-5 backdrop-blur-2xl lg:px-12">
-        <div className="flex min-w-0 items-center gap-4">
-          <h1 className="text-2xl font-bold tracking-[-0.04em] text-white">PRUDENCE</h1>
-          <span className="hidden border-l border-white/20 pl-4 text-sm font-medium uppercase tracking-[0.22em] text-white/45 md:block">
-            AI Compliance Agent
-          </span>
-        </div>
+    <div className="min-h-screen bg-[#08090a] text-[#f4f0e8] flex flex-col font-sans">
+      <input
+        ref={inputRef}
+        className="hidden"
+        type="file"
+        accept="application/pdf,image/*,.dwg,.dxf"
+        onChange={onInputChange}
+      />
 
-        <div className="mx-4 hidden max-w-xl flex-1 md:block">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/55" size={22} />
-            <input
-              className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.055] pl-12 pr-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-white/40"
-              placeholder="Search regulations, projects, or clauses..."
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 text-white/75">
-          <button className="relative transition hover:text-white" title="Notifications">
-            <Bell size={22} />
-            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-white" />
-          </button>
-          <button className="transition hover:text-white" title="Settings">
-            <Settings size={22} />
-          </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-sm font-semibold text-white">
-            PR
-          </div>
-        </div>
-      </header>
-
-      <main className="relative z-10 flex h-screen flex-col gap-0 overflow-hidden pt-20 lg:flex-row">
-        <section className="flex min-h-0 flex-1 flex-col gap-6 p-5 lg:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-3xl font-semibold tracking-[-0.03em] text-white">Drawing Analysis</h2>
-              <p className="mt-1 text-sm text-white/50">{analysis.documentName}</p>
+      {view === 'landing' ? (
+        <LandingPage
+          onLaunch={() => setView('workspace')}
+          onUpload={() => inputRef.current?.click()}
+        />
+      ) : (
+        <>
+          {/* Top Header Bar inside Workspace */}
+          <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#08090a]/90 px-6 backdrop-blur-md">
+            {/* Brand */}
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
+              <div className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-[#111416] p-1">
+                <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
+              </div>
+              <span className="font-space text-base font-bold tracking-tight text-[#f4f0e8]">PRUDENCE</span>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c]">
+                AI COMPLIANCE AGENT
+              </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={jurisdiction}
-                onChange={(event) => setJurisdiction(event.target.value as Jurisdiction)}
-                className="h-9 rounded-lg border border-white/10 bg-white/[0.055] px-3 text-sm font-semibold text-white outline-none"
-              >
-                {jurisdictions.map((item) => (
-                  <option key={item.id} value={item.id} className="bg-[#141313]">
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+
+            {/* Center Search Box */}
+            <div className="hidden max-w-md flex-1 px-8 md:block">
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 text-[#8c999c]" size={14} />
+                <input
+                  type="text"
+                  placeholder="Search regulations, projects, or clauses..."
+                  className="h-8 w-full rounded border border-[rgba(255,255,255,0.08)] bg-[#111416] pl-9 pr-8 font-sans text-xs text-[#f4f0e8] placeholder-[#8c999c] outline-none transition focus:border-[#f26a3d]"
+                />
+                <kbd className="absolute right-3 font-mono text-[10px] text-[#8c999c] bg-[#151a1c] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)]">
+                  /
+                </kbd>
+              </div>
+            </div>
+
+            {/* Right Tools */}
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setAnnotationsVisible((value) => !value)}
-                className="glass-button"
-                title="Toggle layers"
+                onClick={() => setView('landing')}
+                className="btn-secondary text-xs"
               >
-                <Layers size={17} />
-                <span>Layers</span>
+                <span>← Home</span>
               </button>
+
               <button
                 type="button"
-                onClick={() => setIs3D(prev => !prev)}
-                className={`glass-button`}
-                style={{
-                  borderColor: is3D ? 'rgba(0, 243, 255, 0.4)' : undefined,
-                  color: is3D ? '#00f3ff' : undefined,
-                  backgroundColor: is3D ? 'rgba(0, 243, 255, 0.1)' : undefined,
-                }}
+                onClick={() => setIs3D((prev) => !prev)}
+                className={`btn-secondary text-xs ${is3D ? 'btn-outline-active' : ''}`}
                 title="3D View"
               >
-                <Sparkles size={17} />
+                <Sparkles size={14} />
                 <span>3D View</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setIsChatOpen((prev) => !prev)}
-                className="glass-button border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                className="btn-secondary text-xs"
                 title="AI Chat Assistant"
               >
-                <MessageSquare size={17} />
+                <MessageSquare size={14} />
                 <span>AI Chat</span>
               </button>
-              <button type="button" onClick={exportReport} disabled={!canAnalyze} className="glass-button disabled:opacity-40">
-                <Download size={17} />
-                <span>Export Report</span>
-              </button>
-              <button type="button" onClick={() => inputRef.current?.click()} className="solid-button">
-                <Upload size={17} />
-                <span>{file ? 'Replace File' : 'Upload File'}</span>
-              </button>
             </div>
-          </div>
+          </header>
 
-          <div
-            onDragOver={(event) => {
-              event.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={onDrop}
-            className={`relative min-h-0 flex-1 overflow-hidden rounded-2xl border backdrop-blur-3xl transition ${
-              isDragging ? 'border-white/50 bg-white/10' : 'border-white/10 bg-white/[0.045]'
-            }`}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-          >
-            <input
-              ref={inputRef}
-              className="hidden"
-              type="file"
-              accept="application/pdf,image/*,.dwg,.dxf"
-              onChange={onInputChange}
-            />
+          {/* Main Workspace */}
+          <main className="flex flex-1 flex-col overflow-hidden lg:flex-row">
+            {/* Left Section: Main Analysis & Canvas */}
+            <section className="flex flex-1 flex-col gap-4 p-6 overflow-y-auto min-w-0">
+              {/* Subheader & Kicker */}
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#f26a3d]">
+                  PRUDENCE AI / COMPLIANCE WORKSPACE
+                </span>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h1 className="font-space text-3xl md:text-4xl font-semibold tracking-tight text-[#f4f0e8]">
+                      Drawing Analysis
+                    </h1>
+                    <p className="mt-1 font-sans text-xs text-[#8c999c]">
+                      {file ? file.name : 'See the risk before it reaches the site.'}
+                    </p>
+                  </div>
 
-            <div
-              className="preview-wrapper"
-              style={{
-                // @ts-ignore
-                '--rx': `${dragState.rx}deg`,
-                // @ts-ignore
-                '--rz': `${dragState.rz}deg`,
-              }}
-            >
-              <div className="elevation-wall elevation-left" />
-              <div className="elevation-wall elevation-right" />
+                  {/* Start new analysis CTA */}
+                  <button
+                    type="button"
+                    onClick={() => inputRef.current?.click()}
+                    className="btn-orange glow-cta"
+                  >
+                    <span>Start new analysis</span>
+                  </button>
+                </div>
+              </div>
 
-              <div className="preview">
-                {file ? (
-                  <DrawingPreview file={file} previewUrl={previewUrl} />
+              {/* Jurisdiction Bar & Rule Packs */}
+              <div className="flex flex-wrap items-center justify-between gap-4 card-prudence p-3">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-[10px] font-semibold text-[#8c999c] uppercase">JURISDICTION</span>
+                  <div className="relative">
+                    <select
+                      value={jurisdiction}
+                      onChange={(e) => setJurisdiction(e.target.value as Jurisdiction)}
+                      className="h-8 rounded border border-[rgba(255,255,255,0.08)] bg-[#08090a] px-3 pr-8 font-mono text-xs font-semibold text-[#f4f0e8] outline-none cursor-pointer hover:border-[rgba(255,255,255,0.2)]"
+                    >
+                      {jurisdictions.map((item) => (
+                        <option key={item.id} value={item.id} className="bg-[#111416]">
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8c999c] pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[10px] font-semibold text-[#8c999c] uppercase mr-1">RULE PACKS</span>
+                  <label className={`pack-pill ${rulePacks.dcr ? 'is-active' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={rulePacks.dcr}
+                      onChange={(e) => setRulePacks((p) => ({ ...p, dcr: e.target.checked }))}
+                    />
+                    <span>DCR Development control</span>
+                  </label>
+                  <label className={`pack-pill ${rulePacks.nbc ? 'is-active' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={rulePacks.nbc}
+                      onChange={(e) => setRulePacks((p) => ({ ...p, nbc: e.target.checked }))}
+                    />
+                    <span>NBC National building code</span>
+                  </label>
+                  <label className={`pack-pill ${rulePacks.rera ? 'is-active' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={rulePacks.rera}
+                      onChange={(e) => setRulePacks((p) => ({ ...p, rera: e.target.checked }))}
+                    />
+                    <span>RERA Project disclosure</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Drawing Canvas Container */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={onDrop}
+                className="relative flex-1 min-h-[500px] card-prudence cad-grid-bg overflow-hidden flex flex-col"
+                onMouseDown={onMouseDown}
+                onMouseMove={onMouseMove}
+              >
+                {/* Canvas Sub-toolbar */}
+                <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#111416]/80 px-4 py-2 z-20">
+                  <span className="font-mono text-[10px] text-[#8c999c] uppercase">
+                    DRAWING ANALYSIS / {jurisdiction.toUpperCase()}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAnnotationsVisible((v) => !v)}
+                      className={`btn-secondary text-xs h-7 ${annotationsVisible ? 'border-[#f26a3d] text-[#f26a3d]' : ''}`}
+                      title="Layers"
+                    >
+                      <Layers size={13} />
+                      <span>Layers</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={exportReport}
+                      disabled={!canAnalyze}
+                      className="btn-secondary text-xs h-7 disabled:opacity-40"
+                      title="Export Report"
+                    >
+                      <Download size={13} />
+                      <span>Export Report</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => inputRef.current?.click()}
+                      className="btn-outline-active h-7"
+                    >
+                      <Upload size={13} />
+                      <span>{file ? 'Replace File' : 'Upload File'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Canvas Drawing Surface */}
+                <div className="relative flex-1 w-full h-full flex items-center justify-center p-6 overflow-hidden">
+                  <div
+                    className="preview-wrapper w-full h-full relative flex items-center justify-center"
+                    style={{
+                      // @ts-ignore
+                      '--rx': `${dragState.rx}deg`,
+                      // @ts-ignore
+                      '--rz': `${dragState.rz}deg`,
+                    }}
+                  >
+                    <div className="preview w-full h-full flex items-center justify-center relative">
+                      {file ? (
+                        <DrawingPreview file={file} previewUrl={previewUrl} />
+                      ) : (
+                        <UploadEmptyState onChoose={() => inputRef.current?.click()} isDragging={isDragging} />
+                      )}
+                    </div>
+
+                    {/* 3D Model Extrusion Wireframe */}
+                    <div className="holo-building">
+                      <div className="holo-wall wall-f" />
+                      <div className="holo-wall wall-b" />
+                      <div className="holo-wall wall-l" />
+                      <div className="holo-wall wall-r" />
+                      <div className="holo-floor floor-2" />
+                      <div className="holo-wall wall-f2" />
+                      <div className="holo-wall wall-b2" />
+                      <div className="holo-wall wall-l2" />
+                      <div className="holo-wall wall-r2" />
+                      <div className="holo-roof roof-l" />
+                      <div className="holo-roof roof-r" />
+                      <div className="holo-gable gable-f" />
+                      <div className="holo-gable gable-b" />
+                    </div>
+                  </div>
+
+                  {/* Center Compliance Circle Metric on Canvas */}
+                  {file && !is3D && (
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex flex-col items-center justify-center">
+                      <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#f26a3d] bg-[#08090a]/85 backdrop-blur-md shadow-[0_0_25px_rgba(242,106,61,0.3)]">
+                        <span className="font-space text-3xl font-bold text-[#f4f0e8]">{analysis.score}%</span>
+                        <span className="absolute -bottom-4 font-mono text-[9px] text-[#8c999c] uppercase tracking-wider bg-[#08090a] px-2 py-0.5 border border-[rgba(255,255,255,0.08)] rounded">
+                          COMPLIANCE
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* HIGH-PRECISION GLOWING POINTER PINS ON DRAWING */}
+                  {file && annotationsVisible && !is3D && (
+                    <>
+                      {analysis.violations.map((violation) => {
+                        if (!violation.annotation) return null;
+                        const isSelected = selectedViolationId === violation.id;
+                        return (
+                          <div
+                            key={violation.id}
+                            onClick={() => setSelectedViolationId(violation.id)}
+                            className={`absolute cursor-pointer transition-all duration-200 z-30 group ${
+                              isSelected ? 'scale-110' : 'hover:scale-105'
+                            }`}
+                            style={{
+                              left: `${violation.annotation.x}%`,
+                              top: `${violation.annotation.y}%`,
+                              transform: 'translate(-50%, -50%)',
+                            }}
+                          >
+                            {/* Glowing Radar Beacon Target */}
+                            <div className="relative flex items-center justify-center">
+                              <span
+                                className={`absolute h-9 w-9 rounded-full animate-ping opacity-75 ${
+                                  violation.severity === 'HIGH' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
+                                }`}
+                              />
+                              <div
+                                className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-xs font-bold shadow-2xl ${
+                                  isSelected
+                                    ? 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
+                                    : 'border-[#81b7c2] text-[#f4f0e8]'
+                                }`}
+                              >
+                                {violation.id}
+                              </div>
+
+                              {/* Leader Line Callout Tag */}
+                              <div className="absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border border-[#f26a3d] px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto">
+                                <span className="font-bold text-[#f26a3d]">{violation.id}:</span>
+                                <span>{violation.title}</span>
+                                <span className="bg-[#f26a3d] text-[#08090a] px-1.5 py-0.5 rounded font-bold">
+                                  {violation.delta}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+
+                {/* Bottom Controls Bar */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded bg-[#111416]/90 border border-[rgba(255,255,255,0.08)] p-1 backdrop-blur-md">
+                  <button className="tool-btn" title="Zoom in"><ZoomIn size={16} /></button>
+                  <button className="tool-btn" title="Zoom out"><ZoomOut size={16} /></button>
+                  <button className="tool-btn" title="Pan"><Hand size={16} /></button>
+                  <div className="h-4 w-px bg-[rgba(255,255,255,0.08)] mx-1" />
+                  <button className="tool-btn" title="Measure"><Ruler size={16} /></button>
+                </div>
+              </div>
+            </section>
+
+            {/* Right Section: Reasoning Rail & Sidebar */}
+            <aside className="w-full lg:w-[380px] xl:w-[420px] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-6 flex flex-col gap-6 overflow-y-auto">
+              {/* AGENT REASONING Panel */}
+              <div className="card-prudence p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
+                    AGENT REASONING
+                  </span>
+                  <span className="font-mono text-[9px] font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2 py-0.5 rounded">
+                    • {file ? 'ANALYSIS READY' : 'AWAITING UPLOAD'}
+                  </span>
+                </div>
+
+                <ul className="flex flex-col gap-2.5 font-mono text-xs text-[#8c999c] pt-1">
+                  <li className={`flex items-center gap-2 ${file ? 'text-[#f4f0e8]' : 'opacity-40'}`}>
+                    <span>01</span>
+                    <CheckCircle2 size={13} className={file ? "text-[#81b7c2]" : "text-[#8c999c]"} />
+                    <span>Extracting building dimensions</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${file ? 'text-[#f4f0e8]' : 'opacity-40'}`}>
+                    <span>02</span>
+                    <CheckCircle2 size={13} className={file ? "text-[#81b7c2]" : "text-[#8c999c]"} />
+                    <span>Cross-referencing municipal bye-laws</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${file ? 'text-[#f26a3d]' : 'opacity-40'}`}>
+                    <span>03</span>
+                    <Sparkles size={13} className={file ? "text-[#f26a3d]" : "text-[#8c999c]"} />
+                    <span className={file ? "font-semibold text-[#f26a3d]" : ""}>Checking front setback deficit</span>
+                  </li>
+                  <li className="flex items-center gap-2 opacity-40">
+                    <span>04</span>
+                    <Circle size={13} />
+                    <span>Validating parking layout</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* ACTIVE VIOLATIONS LIST */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
+                    ACTIVE VIOLATIONS ({analysis.violations.length})
+                  </span>
+                  <button className="text-[#8c999c] hover:text-[#f4f0e8]" title="Filter">
+                    <Filter size={14} />
+                  </button>
+                </div>
+
+                {analysis.violations.length > 0 ? (
+                  <div className="flex flex-col gap-2.5">
+                    {analysis.violations.map((violation) => {
+                      const isSelected = selectedViolationId === violation.id;
+                      return (
+                        <div
+                          key={violation.id}
+                          onClick={() => setSelectedViolationId(violation.id)}
+                          className={`violation-item cursor-pointer ${isSelected ? 'is-selected ring-1 ring-[#f26a3d]' : ''}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="badge-code">{violation.id}</span>
+                            <span className={`badge-${violation.severity.toLowerCase()}`}>
+                              {violation.severity}
+                            </span>
+                          </div>
+
+                          <h4 className="font-sans text-sm font-semibold text-[#f4f0e8] mt-2">
+                            {violation.title}
+                          </h4>
+
+                          <p className="font-mono text-[11px] text-[#8c999c] mt-1">
+                            Required {violation.required} · Provided {violation.found}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <UploadEmptyState onChoose={() => inputRef.current?.click()} isDragging={isDragging} />
+                  <div className="card-prudence p-4 text-xs font-mono text-[#8c999c] text-center">
+                    Upload a construction drawing to scan for violations.
+                  </div>
                 )}
               </div>
 
-              {file && annotationsVisible ? <Annotations violations={analysis.violations} /> : null}
+              {/* DETAILED VIOLATION AUDIT PANEL */}
+              {selectedViolation && (
+                <div className="card-prudence p-5 border border-[#f26a3d]/40 bg-[#111416] flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-[#f26a3d] uppercase tracking-wider">
+                      AUDIT DETAIL / {selectedViolation.id}
+                    </span>
+                    <span className={`badge-${selectedViolation.severity.toLowerCase()}`}>
+                      {selectedViolation.severity} SEVERITY
+                    </span>
+                  </div>
 
-              <div className="holo-building">
-                {/* Floor 1 */}
-                <div className="holo-wall wall-f" />
-                <div className="holo-wall wall-b" />
-                <div className="holo-wall wall-l" />
-                <div className="holo-wall wall-r" />
-                <div className="holo-floor floor-2" />
-                
-                {/* Floor 2 */}
-                <div className="holo-wall wall-f2" />
-                <div className="holo-wall wall-b2" />
-                <div className="holo-wall wall-l2" />
-                <div className="holo-wall wall-r2" />
-                
-                {/* Roof */}
-                <div className="holo-roof roof-l" />
-                <div className="holo-roof roof-r" />
-                <div className="holo-gable gable-f" />
-                <div className="holo-gable gable-b" />
+                  <div>
+                    <h3 className="font-space text-lg font-bold text-[#f4f0e8]">
+                      {selectedViolation.title}
+                    </h3>
+                    <p className="font-mono text-xs text-[#81b7c2] mt-1">
+                      {selectedViolation.clause || activeJurisdiction.label}
+                    </p>
+                  </div>
+
+                  {/* Measurement Table */}
+                  <div className="font-mono text-xs bg-[#08090a] p-3.5 rounded border border-white/10 space-y-2">
+                    <div className="flex justify-between text-[#8c999c]">
+                      <span>Required Standard:</span>
+                      <span className="text-[#f4f0e8] font-bold">{selectedViolation.required}</span>
+                    </div>
+                    <div className="flex justify-between text-[#8c999c]">
+                      <span>Found in Drawing:</span>
+                      <span className="text-[#f4f0e8] font-bold">{selectedViolation.found}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-white/10 pt-2 text-[#f26a3d]">
+                      <span>Regulatory Deficit:</span>
+                      <span className="font-bold">{selectedViolation.delta}</span>
+                    </div>
+                  </div>
+
+                  {/* Description & Impact */}
+                  {selectedViolation.description && (
+                    <div className="text-xs font-sans text-[#8c999c] leading-relaxed">
+                      <span className="font-mono text-[10px] font-bold text-[#f4f0e8] uppercase block mb-1">
+                        ARCHITECTURAL IMPACT
+                      </span>
+                      {selectedViolation.description}
+                    </div>
+                  )}
+
+                  {/* Remediation Action */}
+                  {selectedViolation.recommendation && (
+                    <div className="p-3 rounded bg-white/5 border border-white/10 text-xs font-sans">
+                      <span className="font-mono text-[10px] font-bold text-[#81b7c2] uppercase block mb-1">
+                        RECOMMENDED REMEDIATION
+                      </span>
+                      <p className="text-[#f4f0e8] leading-relaxed">
+                        {selectedViolation.recommendation}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Ask AI CTA Button */}
+                  <button
+                    type="button"
+                    onClick={() => askAiAboutViolation(selectedViolation)}
+                    className="btn-orange text-xs h-9 w-full mt-1"
+                  >
+                    <Sparkles size={14} />
+                    <span>Ask PRUDENCE AI to Auto-Fix {selectedViolation.id} ↗</span>
+                  </button>
+                </div>
+              )}
+
+              {/* CURRENT STATUS / Score Card */}
+              <div className="card-prudence p-4 mt-auto flex flex-col gap-4">
+                <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
+                  CURRENT STATUS
+                </span>
+
+                <div className="flex items-center gap-4">
+                  {/* Radial score ring */}
+                  <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-[#f26a3d] bg-[#08090a]">
+                    <span className="font-space text-xl font-bold text-[#f4f0e8]">{analysis.score}%</span>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[10px] text-[#8c999c] uppercase">RISK LEVEL</span>
+                    <span className="font-sans text-base font-bold text-[#f4f0e8]">{analysis.risk}</span>
+                    <span className="font-mono text-[10px] text-[#8c999c] mt-1 uppercase">CODE</span>
+                    <span className="font-mono text-xs font-semibold text-[#f26a3d]">{analysis.jurisdiction}</span>
+                  </div>
+                </div>
+
+                {/* Coverage bar */}
+                <div className="flex flex-col gap-1 border-t border-[rgba(255,255,255,0.08)] pt-3">
+                  <div className="flex justify-between font-mono text-[10px] text-[#8c999c]">
+                    <span>Coverage</span>
+                    <span>{analysis.coverage}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-[#151a1c] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#f26a3d] rounded-full transition-all duration-500"
+                      style={{ width: `${analysis.coverage}%` }}
+                    />
+                  </div>
+                </div>
               </div>
+            </aside>
+          </main>
+
+          {/* Floating Action Button for AI Chat */}
+          <button
+            type="button"
+            onClick={() => setIsChatOpen((prev) => !prev)}
+            className="fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-[#f26a3d] text-[#08090a] shadow-[0_0_20px_rgba(242,106,61,0.4)] transition hover:scale-105"
+            title="Open AI Chat Assistant"
+          >
+            <Sparkles size={20} />
+          </button>
+
+          {/* AI Chat Slide-Over Drawer */}
+          <AIChatDrawer
+            isOpen={isChatOpen}
+            onClose={() => setIsChatOpen(false)}
+            messages={chatMessages}
+            onSend={handleSendChatMessage}
+            isSending={isSendingChat}
+            onClear={() =>
+              setChatMessages([
+                {
+                  role: 'assistant',
+                  content: 'Hello! I am PRUDENCE AI. Ask me anything about this blueprint, building bylaws, or violation mitigation steps.',
+                },
+              ])
+            }
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+/* CONTINUOUS LOOPING ANIMATED HEADLINE COMPONENT */
+function AnimatedHeadline({ text }: { text: string }) {
+  let charCounter = 0;
+  return (
+    <h1 className="font-outfit text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-gradient-orange leading-[1.08] max-w-4xl relative z-10">
+      {text.split(' ').map((word, wIdx) => (
+        <span key={wIdx} className="inline-block whitespace-nowrap mr-3 sm:mr-4">
+          {word.split('').map((char) => {
+            const index = charCounter++;
+            return (
+              <span
+                key={index}
+                className="animated-letter-loop"
+                style={{ animationDelay: `${index * 75}ms` }}
+              >
+                {char}
+              </span>
+            );
+          })}
+        </span>
+      ))}
+    </h1>
+  );
+}
+
+/* SLEEK VERCEL/LINEAR STYLE HUMAN SAAS LANDING PAGE COMPONENT */
+function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: () => void }) {
+  const [activeTab, setActiveTab] = useState<'v1' | 'v2' | 'v3'>('v1');
+
+  return (
+    <div className="relative min-h-screen bg-ambient-mesh text-[#f4f0e8] flex flex-col font-sans overflow-x-hidden">
+      {/* Sleek Vercel Header Navbar */}
+      <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-white/10 bg-[#08090a]/90 px-6 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-[#111416] p-1.5 shadow-sm">
+            <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
+          </div>
+          <span className="font-space text-lg font-bold tracking-tight text-[#f4f0e8]">PRUDENCE AI</span>
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c] bg-white/5 px-2 py-0.5 rounded border border-white/10">
+            BBMP 2026 AUDIT ENGINE
+          </span>
+        </div>
+
+        <nav className="hidden md:flex items-center gap-8 font-sans text-xs font-medium text-[#8c999c]">
+          <a href="#hero" className="hover:text-[#f4f0e8] transition">Product</a>
+          <a href="#showcase" className="hover:text-[#f4f0e8] transition">Interactive Demo</a>
+          <a href="#workflow" className="hover:text-[#f4f0e8] transition">Workflow</a>
+          <a href="#bylaws" className="hover:text-[#f4f0e8] transition">Supported Bylaws</a>
+        </nav>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onLaunch}
+            className="btn-orange glow-cta text-xs h-9 px-4"
+          >
+            <span>Launch Workspace ↗</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Sleek Hero Section with Three.js 3D Wireframe Building Background */}
+      <section id="hero" className="relative z-10 flex flex-col items-center justify-center pt-20 pb-16 px-6 text-center max-w-4xl mx-auto min-h-[520px]">
+        {/* Three.js 3D Architectural Wireframe Canvas */}
+        <ThreeBuildingBackground />
+
+        {/* Kicker Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 font-mono text-[11px] font-semibold text-[#8c999c] mb-6 relative z-10 backdrop-blur-md">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#f26a3d] animate-ping" />
+          <span>ARCHITECTURAL BLUEPRINT CODE COMPLIANCE</span>
+        </div>
+
+        {/* Animated Letter Headline with Continuous Looping Wave */}
+        <AnimatedHeadline text="Catch Building Code Violations Before Breaking Ground." />
+
+        {/* Simple, Crazy Attractive Sentence Subtitle */}
+        <p className="mt-6 font-sans text-base sm:text-lg text-[#8c999c] max-w-2xl leading-relaxed relative z-10 backdrop-blur-xs">
+          Upload 2D blueprints or 3D CAD models — spot setback deficits, FSI breaches, and NBC fire safety risks before a single brick is laid.
+        </p>
+
+        {/* Dual CTAs */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-4 relative z-10">
+          <button
+            type="button"
+            onClick={onLaunch}
+            className="btn-orange glow-cta text-sm h-11 px-7 shadow-lg"
+          >
+            <span>Launch Compliance Workspace ↗</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onUpload}
+            className="btn-cream text-sm h-11 px-6"
+          >
+            <Upload size={15} />
+            <span>Upload Blueprint (PDF / DWG)</span>
+          </button>
+        </div>
+      </section>
+
+      {/* SLEEK INTERACTIVE PRODUCT DEMO SHOWCASE WINDOW */}
+      <section id="showcase" className="relative z-10 max-w-6xl mx-auto px-6 py-6 w-full">
+        <div className="rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-[#08090a] flex flex-col">
+          {/* Desktop Mac Window Header */}
+          <div className="flex items-center justify-between border-b border-white/10 bg-[#111416] px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-[#ff5f56]" />
+              <span className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
+              <span className="h-3 w-3 rounded-full bg-[#27c93f]" />
+              <span className="ml-2 font-mono text-xs font-semibold text-[#8c999c]">
+                PRUDENCE AI / Ground Floor Blueprint.dwg
+              </span>
             </div>
 
-            {file ? (
-              <div className="absolute left-4 top-4 rounded-xl border border-white/10 bg-black/45 px-4 py-3 backdrop-blur-xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Loaded Drawing</p>
-                <p className="mt-1 max-w-[360px] truncate text-sm font-semibold text-white">{file.name}</p>
-                <p className="text-xs text-white/45">{formatBytes(file.size)} | {file.type || 'CAD/document file'}</p>
-              </div>
-            ) : null}
-
-            <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/65 p-2 backdrop-blur-xl">
-              <button className="tool-button" title="Zoom in"><ZoomIn size={21} /></button>
-              <button className="tool-button" title="Zoom out"><ZoomOut size={21} /></button>
-              <button className="tool-button" title="Pan"><Hand size={21} /></button>
-              <div className="mx-1 h-7 w-px bg-white/15" />
-              <button className="tool-button" title="Measure"><Ruler size={21} /></button>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] text-[#f26a3d] bg-[#f26a3d]/10 border border-[#f26a3d]/30 px-2 py-0.5 rounded font-semibold">
+                BBMP 2026 VERIFIED
+              </span>
             </div>
           </div>
-        </section>
 
-        <aside className="flex max-h-[42vh] w-full flex-col gap-5 overflow-y-auto border-t border-white/10 bg-white/[0.018] p-5 lg:max-h-none lg:h-full lg:overflow-y-auto lg:w-[480px] lg:border-l lg:border-t-0 lg:p-6">
-          <AgentReasoning state={state} hasFile={Boolean(file)} />
-          <Violations analysis={analysis} state={state} />
-          <ScoreCard analysis={analysis} state={state} />
-        </aside>
-      </main>
+          {/* Interactive Inspection Mode Tabs */}
+          <div className="flex items-center gap-2 border-b border-white/10 bg-[#08090a] px-4 py-2 overflow-x-auto">
+            <span className="font-mono text-[10px] text-[#8c999c] uppercase mr-2 font-semibold">RULE NODES:</span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('v1')}
+              className={`px-3 py-1 font-mono text-xs rounded transition ${activeTab === 'v1' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f4f0e8] bg-white/5'}`}
+            >
+              V1: Front Setback Deficit (-1.20 m)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('v2')}
+              className={`px-3 py-1 font-mono text-xs rounded transition ${activeTab === 'v2' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f4f0e8] bg-white/5'}`}
+            >
+              V2: Main Gate Width (-1.20 m)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('v3')}
+              className={`px-3 py-1 font-mono text-xs rounded transition ${activeTab === 'v3' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f4f0e8] bg-white/5'}`}
+            >
+              V3: Open Space Coverage (-4.6 %)
+            </button>
+          </div>
 
-      {/* Floating Action Button for AI Chat */}
-      <button
-        type="button"
-        onClick={() => setIsChatOpen((prev) => !prev)}
-        className="fixed bottom-8 right-8 z-30 flex h-16 w-16 items-center justify-center rounded-full border border-blue-400/40 bg-blue-600/30 text-blue-300 shadow-[0_0_30px_rgba(59,130,246,0.35)] backdrop-blur-2xl transition hover:scale-105 hover:bg-blue-600/40 hover:text-white"
-        title="Open AI Chat Assistant"
-      >
-        <Sparkles size={26} />
-      </button>
+          {/* Split Workspace View */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 min-h-[460px]">
+            {/* Left Blueprint Graphic with Scanner Line (2 Cols) */}
+            <div className="lg:col-span-2 relative cad-grid-bg flex items-center justify-center p-6 border-b lg:border-b-0 lg:border-r border-white/10 overflow-hidden">
+              <div className="laser-scanner-line" />
+              <CadBlueprintGraphic filename="BBMP_Ground_Floor_Plan.dwg" />
 
-      {/* In-App AI Chat Slide-Over Drawer */}
-      <AIChatDrawer
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        messages={chatMessages}
-        onSend={handleSendChatMessage}
-        isSending={isSendingChat}
-        onClear={() =>
-          setChatMessages([
-            {
-              role: 'assistant',
-              content: 'Hello! I am PRUDENCE AI. Ask me anything about this blueprint, building bylaws, or violation mitigation steps.',
-            },
-          ])
-        }
-      />
+              {/* Active Marker Highlights */}
+              {activeTab === 'v1' && (
+                <div className="canvas-marker pulse-marker border-[#f26a3d]" style={{ left: '74%', top: '32%' }}>
+                  <span className="code-tag">V1</span>
+                  <span>-1.20 m</span>
+                </div>
+              )}
+              {activeTab === 'v2' && (
+                <div className="canvas-marker pulse-marker border-[#f26a3d]" style={{ left: '18%', top: '78%' }}>
+                  <span className="code-tag">V2</span>
+                  <span>-1.20 m</span>
+                </div>
+              )}
+              {activeTab === 'v3' && (
+                <div className="canvas-marker pulse-marker border-[#f26a3d]" style={{ left: '52%', top: '88%' }}>
+                  <span className="code-tag">V3</span>
+                  <span>-4.6 %</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right Inspection Rail (1 Col) */}
+            <div className="p-6 bg-[#08090a] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between font-mono text-[10px] text-[#8c999c]">
+                  <span>CLAUSE AUDIT</span>
+                  <span className="text-[#f26a3d] font-bold">HIGH SEVERITY</span>
+                </div>
+
+                <h3 className="font-space text-lg font-bold text-[#f4f0e8] mt-2">
+                  {activeTab === 'v1'
+                    ? 'Front Setback Deficit'
+                    : activeTab === 'v2'
+                    ? 'Main Gate Width Clearance'
+                    : 'Open Space Coverage Shortfall'}
+                </h3>
+
+                <p className="font-mono text-xs text-[#81b7c2] mt-1">
+                  {activeTab === 'v1'
+                    ? 'BBMP Bylaws 2026 — Clause 14.2 (Table 4.1)'
+                    : activeTab === 'v2'
+                    ? 'National Building Code 2016 — Part 4 Sec 3.2'
+                    : 'Development Control Rules — Open Plot Ratio'}
+                </p>
+
+                {/* Audit Metrics Table */}
+                <div className="mt-4 font-mono text-xs bg-[#111416] p-3 rounded border border-white/10 space-y-2">
+                  <div className="flex justify-between text-[#8c999c]">
+                    <span>Required Standard:</span>
+                    <span className="text-[#f4f0e8] font-bold">
+                      {activeTab === 'v1' ? '6.00 m' : activeTab === 'v2' ? '6.00 m' : '15.0 %'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[#8c999c]">
+                    <span>Provided in Drawing:</span>
+                    <span className="text-[#f4f0e8] font-bold">
+                      {activeTab === 'v1' ? '4.80 m' : activeTab === 'v2' ? '4.80 m' : '10.4 %'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-2 text-[#f26a3d]">
+                    <span>Regulatory Deficit:</span>
+                    <span className="font-bold">
+                      {activeTab === 'v1' ? '-1.20 m' : activeTab === 'v2' ? '-1.20 m' : '-4.6 %'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Recommendation Box */}
+                <div className="mt-4 p-3 rounded bg-white/5 border border-white/10 text-xs font-sans">
+                  <span className="font-mono text-[10px] text-[#f26a3d] uppercase font-bold block mb-1">
+                    RECOMMENDED ARCHITECTURAL ACTION
+                  </span>
+                  <p className="text-[#8c999c] leading-relaxed">
+                    {activeTab === 'v1'
+                      ? 'Shift column grid line A1-A4 by 1.20m inward, or submit setback relaxation petition under BBMP Section 14.'
+                      : activeTab === 'v2'
+                      ? 'Widen entry gate clear span from 4.80m to 6.00m to fulfill NBC emergency fire vehicle entry criteria.'
+                      : 'Increase permeable courtyard paving to meet minimum 15% open ground plot coverage.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                type="button"
+                onClick={onLaunch}
+                className="btn-orange glow-cta w-full text-xs h-10 mt-6"
+              >
+                <span>Inspect Full Drawing in Workspace ↗</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* INTERACTIVE 3-STEP ENGINEERING SIMULATOR WORKFLOW */}
+      <section id="workflow" className="py-20 max-w-6xl mx-auto px-6 w-full relative z-10">
+        <InteractiveWorkflowSimulator onLaunch={onLaunch} />
+      </section>
+
+      {/* INTERACTIVE MUNICIPAL BYLAWS TESTER RADAR */}
+      <section id="bylaws" className="py-16 max-w-6xl mx-auto px-6 w-full relative z-10">
+        <InteractiveBylawTester onLaunch={onLaunch} />
+      </section>
+
+      {/* SLEEK VERCEL FOOTER CTA */}
+      <section className="py-20 max-w-5xl mx-auto px-6 w-full relative z-10">
+        <div className="p-10 text-center rounded-xl border border-white/10 bg-[#111416]">
+          <h2 className="font-space text-3xl md:text-4xl font-bold text-[#f4f0e8]">
+            Start auditing blueprints today.
+          </h2>
+          <p className="font-sans text-sm text-[#8c999c] mt-3 max-w-xl mx-auto">
+            Upload your CAD drawing package to detect setback deficits and municipal compliance issues in seconds.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <button
+              type="button"
+              onClick={onLaunch}
+              className="btn-orange glow-cta text-sm h-11 px-8 shadow-lg"
+            >
+              <span>Launch Compliance Workspace ↗</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-6 text-center font-mono text-xs text-[#8c999c] relative z-10">
+        PRUDENCE AI — Architectural Code Compliance Intelligence
+      </footer>
     </div>
   );
 }
@@ -628,111 +1231,109 @@ function AIChatDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
-      <div className="flex h-full w-full max-w-lg flex-col border-l border-white/15 bg-[#0e1626]/95 backdrop-blur-2xl shadow-2xl">
+      <div className="flex h-full w-full max-w-md flex-col border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-5 py-4 bg-[#111416]">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400">
-              <Bot size={22} />
+            <div className="flex h-8 w-8 items-center justify-center rounded border border-[#f26a3d]/30 bg-[#f26a3d]/10 text-[#f26a3d]">
+              <Bot size={18} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">PRUDENCE AI Assistant</h3>
-              <p className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <h3 className="font-space text-sm font-semibold text-[#f4f0e8]">PRUDENCE AI Assistant</h3>
+              <p className="flex items-center gap-1.5 font-mono text-[10px] text-[#81b7c2]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#81b7c2] animate-pulse" />
                 Grounded in active blueprint
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={onClear}
-              className="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white"
+              className="rounded p-1.5 text-[#8c999c] hover:bg-[#151a1c] hover:text-[#f4f0e8]"
               title="Clear chat"
             >
-              <Trash2 size={18} />
+              <Trash2 size={16} />
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white"
+              className="rounded p-1.5 text-[#8c999c] hover:bg-[#151a1c] hover:text-[#f4f0e8]"
               title="Close chat"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </div>
 
         {/* Messages Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 space-y-3 font-sans text-xs">
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.role === 'assistant' && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400">
-                  <Bot size={16} />
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[#f26a3d]/30 bg-[#f26a3d]/10 text-[#f26a3d]">
+                  <Bot size={13} />
                 </div>
               )}
 
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                className={`max-w-[85%] rounded p-3 leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-blue-600 text-white rounded-br-none shadow-md'
-                    : 'border border-white/10 bg-white/[0.06] text-white/90 rounded-bl-none backdrop-blur-md'
+                    ? 'bg-[#f26a3d] text-[#08090a] font-medium'
+                    : 'border border-[rgba(255,255,255,0.08)] bg-[#111416] text-[#f4f0e8]'
                 }`}
               >
-                <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+                <div className="whitespace-pre-wrap">{msg.content}</div>
               </div>
 
               {msg.role === 'user' && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white">
-                  <User size={16} />
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[rgba(255,255,255,0.08)] bg-[#151a1c] text-[#f4f0e8]">
+                  <User size={13} />
                 </div>
               )}
             </div>
           ))}
 
           {isSending && (
-            <div className="flex items-center gap-3 text-white/50 text-xs">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400">
-                <Loader2 className="animate-spin" size={16} />
-              </div>
-              <span className="animate-pulse">PRUDENCE AI is analyzing blueprint rules...</span>
+            <div className="flex items-center gap-2 text-[#8c999c] text-xs font-mono">
+              <Loader2 className="animate-spin text-[#f26a3d]" size={14} />
+              <span>PRUDENCE AI is analyzing blueprint rules...</span>
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Suggestion Chips */}
-        <div className="flex gap-2 overflow-x-auto px-6 py-2 border-t border-white/5 no-scrollbar">
+        {/* Suggestions */}
+        <div className="flex gap-2 overflow-x-auto px-5 py-2 border-t border-[rgba(255,255,255,0.08)]">
           {suggestions.map((s) => (
             <button
               key={s}
               onClick={() => onSend(s)}
-              className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70 hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-white transition"
+              className="shrink-0 rounded border border-[rgba(255,255,255,0.08)] bg-[#111416] px-2.5 py-1 font-mono text-[10px] text-[#8c999c] hover:border-[#f26a3d] hover:text-[#f26a3d] transition"
             >
               {s}
             </button>
           ))}
         </div>
 
-        {/* Input Footer */}
-        <form onSubmit={handleSubmit} className="border-t border-white/10 p-4">
+        {/* Input Form */}
+        <form onSubmit={handleSubmit} className="border-t border-[rgba(255,255,255,0.08)] p-3 bg-[#111416]">
           <div className="relative flex items-center">
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Ask PRUDENCE about setback, FSI, NBC rules..."
-              className="w-full rounded-xl border border-white/15 bg-white/[0.06] py-3 pl-4 pr-12 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none backdrop-blur-md"
+              className="w-full rounded border border-[rgba(255,255,255,0.08)] bg-[#08090a] py-2.5 pl-3 pr-10 text-xs text-[#f4f0e8] placeholder-[#8c999c] focus:border-[#f26a3d] focus:outline-none font-sans"
             />
             <button
               type="submit"
               disabled={!inputText.trim() || isSending}
-              className="absolute right-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-30 transition"
+              className="absolute right-1.5 flex h-7 w-7 items-center justify-center rounded bg-[#f26a3d] text-[#08090a] hover:bg-[#f47d55] disabled:opacity-30 transition"
             >
-              <Send size={16} />
+              <Send size={13} />
             </button>
           </div>
         </form>
@@ -741,31 +1342,30 @@ function AIChatDrawer({
   );
 }
 
-function AmbientBackground() {
-  return (
-    <div className="pointer-events-none fixed inset-0">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(255,255,255,0.08),transparent_28%),radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.06),transparent_30%),#000]" />
-      <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.8)_1px,transparent_1px)] [background-size:42px_42px]" />
-    </div>
-  );
-}
-
 function UploadEmptyState({ onChoose, isDragging }: { onChoose: () => void; isDragging: boolean }) {
   return (
-    <div className="flex h-full min-h-[520px] items-center justify-center p-6">
-      <div className="max-w-md text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white">
-          <Upload size={30} />
+    <div className="flex h-full items-center justify-center p-6 text-center">
+      <div className="max-w-sm flex flex-col items-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#f26a3d] bg-[#111416] text-[#f26a3d] mb-4 shadow-[0_0_20px_rgba(242,106,61,0.25)]">
+          <Upload size={24} />
         </div>
-        <h3 className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-white">
+        <h3 className="font-space text-xl font-semibold text-[#f4f0e8]">
           {isDragging ? 'Drop the drawing here' : 'Upload a construction drawing'}
         </h3>
-        <p className="mt-3 text-sm leading-6 text-white/55">
-          Select a PDF, image, DWG, or DXF package. PRUDENCE will preview the file, mark likely
-          compliance issues, and generate a local report for testing.
+        <p className="mt-2 font-sans text-xs text-[#8c999c] leading-relaxed">
+          Select a PDF, image, DWG, or DXF package. PRUDENCE will preview the file, mark compliance issues, and generate a report.
         </p>
-        <button type="button" onClick={onChoose} className="solid-button mx-auto mt-6">
-          <Upload size={17} />
+
+        {/* File extension pills */}
+        <div className="flex gap-2 mt-4 font-mono text-[10px] text-[#8c999c]">
+          <span className="px-2 py-0.5 border border-[rgba(255,255,255,0.08)] rounded bg-[#111416]">PDF</span>
+          <span className="px-2 py-0.5 border border-[rgba(255,255,255,0.08)] rounded bg-[#111416]">DWG</span>
+          <span className="px-2 py-0.5 border border-[rgba(255,255,255,0.08)] rounded bg-[#111416]">DXF</span>
+          <span className="px-2 py-0.5 border border-[rgba(255,255,255,0.08)] rounded bg-[#111416]">PNG</span>
+        </div>
+
+        <button type="button" onClick={onChoose} className="btn-cream mt-5">
+          <Upload size={14} />
           <span>Choose File</span>
         </button>
       </div>
@@ -774,193 +1374,109 @@ function UploadEmptyState({ onChoose, isDragging }: { onChoose: () => void; isDr
 }
 
 function DrawingPreview({ file, previewUrl }: { file: File; previewUrl: string }) {
-  const isImage = file.type.startsWith('image/');
-  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  const isImage = file.type.startsWith('image/') && previewUrl && file.size > 0;
 
   if (isImage) {
-    return <img src={previewUrl} alt={file.name} className="h-full w-full object-contain bg-black/40" />;
-  }
-
-  if (isPdf) {
     return (
-      <object data={previewUrl} type="application/pdf" className="h-full w-full bg-white/5">
-        <FallbackDrawing file={file} />
-      </object>
+      <div className="relative h-full w-full flex items-center justify-center">
+        <img
+          src={previewUrl}
+          alt={file.name}
+          className="h-full w-full object-contain max-h-[600px] border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a]"
+        />
+      </div>
     );
   }
 
-  return <FallbackDrawing file={file} />;
+  return <CadBlueprintGraphic filename={file.name} />;
 }
 
-function FallbackDrawing({ file }: { file: File }) {
+function CadBlueprintGraphic({ filename }: { filename: string }) {
   return (
-    <div className="blueprint-surface flex h-full min-h-[560px] items-center justify-center p-8">
-      <div className="relative aspect-[1.35] w-full max-w-4xl rounded-xl border border-white/15 bg-white/[0.035] p-8">
-        <div className="absolute inset-8 rounded border border-white/25" />
-        <div className="absolute left-[10%] top-[18%] h-[27%] w-[26%] border border-white/30" />
-        <div className="absolute left-[39%] top-[18%] h-[27%] w-[20%] border border-white/30" />
-        <div className="absolute right-[12%] top-[18%] h-[54%] w-[20%] border border-white/30" />
-        <div className="absolute bottom-[15%] left-[10%] h-[36%] w-[49%] border border-white/30" />
-        <div className="absolute bottom-[15%] left-[39%] h-[36%] w-[20%] border border-white/15" />
-        <div className="absolute bottom-6 left-8 text-xs uppercase tracking-[0.18em] text-white/45">
-          {file.name}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Annotations({ violations }: { violations: Violation[] }) {
-  const positions = [
-    { top: '25%', left: '40%' },
-    { bottom: '29%', right: '34%' },
-    { top: '15%', right: '20%' },
-    { bottom: '40%', left: '15%' },
-    { top: '60%', left: '60%' },
-  ];
-
-  return (
-    <>
-      {violations.map((violation, i) => {
-        if (!violation.annotation) return null;
-        const pos = { left: `${violation.annotation.x}%`, top: `${violation.annotation.y}%` };
-        return (
-          <div key={i} className="annotation" style={pos}>
-            <span className="pulse-dot" />
-            <div className="glass-callout">
-              <p className="callout-label">{violation.title}</p>
-              <p>{violation.note || `${violation.required ? 'Req: ' + violation.required : ''} ${violation.found ? 'Found: ' + violation.found : ''}`.trim()}</p>
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-function AgentReasoning({ state, hasFile }: { state: AnalysisState; hasFile: boolean }) {
-  const activeText = !hasFile
-    ? 'Waiting for Upload'
-    : state === 'analyzing'
-      ? 'Analyzing Regulations'
-      : 'Analysis Complete';
-
-  const steps = [
-    { label: 'Extracting Building Dimensions', done: hasFile, active: false },
-    { label: 'Cross-referencing Municipal Bye-Laws', done: state === 'complete', active: state === 'analyzing' },
-    { label: 'Checking Setback Requirements...', done: state === 'complete', active: state === 'analyzing' },
-    { label: 'Validating Parking Layout', done: state === 'complete', active: false },
-  ];
-
-  return (
-    <section className="shimmer-pane rounded-2xl p-6">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium uppercase tracking-[0.18em] text-white/65">Agent Reasoning</h3>
-        <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-          <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-          <span>{activeText}</span>
-        </div>
-      </div>
-      <ul className="space-y-4">
-        {steps.map((step) => (
-          <li key={step.label} className={`flex items-center gap-4 ${!step.done && !step.active ? 'opacity-35' : ''}`}>
-            {step.active ? (
-              <Loader2 className="animate-spin text-white/55" size={21} />
-            ) : step.done ? (
-              <CheckCircle2 className="text-white" size={21} />
-            ) : (
-              <Circle className="text-white/65" size={21} />
-            )}
-            <span className={`text-base ${step.active ? 'typing-text text-white/65' : 'text-white/85'}`}>
-              {step.label}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function Violations({ analysis, state }: { analysis: Analysis; state: AnalysisState }) {
-  const loading = state === 'analyzing';
-  const violations = analysis.violations;
-
-  return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium uppercase tracking-[0.18em] text-white/65">
-          Active Violations ({violations.length})
-        </h3>
-        <Filter className="text-white/65" size={21} />
-      </div>
-
-      {loading ? (
-        <div className="glass-card p-5 text-sm text-white/60">Scanning uploaded drawing set...</div>
-      ) : violations.length ? (
-        violations.map((violation) => <ViolationCard key={violation.title} violation={violation} />)
-      ) : (
-        <div className="glass-card p-5 text-sm leading-6 text-white/60">
-          Upload a drawing to generate clause checks, markups, and a compliance report.
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ViolationCard({ violation }: { violation: Violation }) {
-  return (
-    <article className="glass-card group cursor-pointer p-5 transition hover:bg-white/[0.075]">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <span className={`severity severity-${violation.severity.toLowerCase()}`}>{violation.severity}</span>
-        <ExternalLink className="text-white/55 transition group-hover:text-white" size={22} />
-      </div>
-      <h4 className="text-xl font-medium tracking-[-0.02em] text-white">{violation.title}</h4>
-      {violation.note ? (
-        <p className="mt-4 text-base leading-7 text-white/65">{violation.note}</p>
-      ) : (
-        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-white/10 pt-3">
-          <Metric label="Required" value={violation.required ?? '-'} />
-          <Metric label="Found" value={violation.found ?? '-'} />
-          <Metric label={violation.severity === 'MAJOR' ? 'Deficit' : 'Violation'} value={violation.delta ?? '-'} align="right" />
-        </div>
-      )}
-    </article>
-  );
-}
-
-function Metric({ label, value, align = 'left' }: { label: string; value: string; align?: 'left' | 'right' }) {
-  return (
-    <div className={align === 'right' ? 'text-right' : ''}>
-      <p className="text-xs font-semibold text-white/55">{label}</p>
-      <p className="mt-1 text-lg text-white">{value}</p>
-    </div>
-  );
-}
-
-function ScoreCard({ analysis, state }: { analysis: Analysis; state: AnalysisState }) {
-  const score = state === 'idle' ? 0 : analysis.score;
-
-  return (
-    <section className="glass-card mt-auto flex items-center gap-6 p-6">
-      <div
-        className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full"
-        style={{ background: `conic-gradient(#ffffff ${score}%, rgba(255,255,255,0.12) 0)` }}
+    <div className="relative flex h-full w-full items-center justify-center p-4">
+      <svg
+        viewBox="0 0 960 600"
+        className="w-full h-full max-h-[620px] rounded border border-[rgba(255,255,255,0.15)] bg-[#08090a]"
+        style={{ filter: 'drop-shadow(0 0 30px rgba(0,0,0,0.8))' }}
       >
-        <div className="absolute inset-2 rounded-full bg-black" />
-        <span className="relative text-2xl font-semibold text-white">{score}%</span>
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">Current Status</p>
-        <h4 className="mt-1 text-3xl font-semibold leading-none tracking-[-0.04em] text-white">
-          {analysis.status}
-        </h4>
-        <div className="mt-4 flex flex-wrap gap-6">
-          <Metric label="Coverage" value={`${analysis.coverage}%`} />
-          <Metric label="Risk Level" value={analysis.risk} />
-          <Metric label="Code" value={analysis.jurisdiction} />
-        </div>
-      </div>
-    </section>
+        <defs>
+          <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="0.8" />
+          </pattern>
+        </defs>
+
+        <rect width="960" height="600" fill="url(#grid)" />
+
+        <rect
+          x="60"
+          y="40"
+          width="840"
+          height="520"
+          fill="rgba(242, 106, 61, 0.03)"
+          stroke="#f26a3d"
+          strokeWidth="1.2"
+          strokeDasharray="6 4"
+        />
+
+        <rect
+          x="120"
+          y="90"
+          width="720"
+          height="420"
+          fill="rgba(255, 255, 255, 0.02)"
+          stroke="#f4f0e8"
+          strokeWidth="2.5"
+        />
+        <rect
+          x="126"
+          y="96"
+          width="708"
+          height="408"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.3)"
+          strokeWidth="1"
+        />
+
+        <line x1="380" y1="96" x2="380" y2="350" stroke="#f4f0e8" strokeWidth="2" />
+        <line x1="620" y1="96" x2="620" y2="504" stroke="#f4f0e8" strokeWidth="2" />
+        <line x1="126" y1="350" x2="620" y2="350" stroke="#f4f0e8" strokeWidth="2" />
+        <line x1="380" y1="350" x2="380" y2="504" stroke="#f4f0e8" strokeWidth="2" />
+
+        <rect x="150" y="380" width="80" height="100" fill="none" stroke="rgba(129, 183, 194, 0.5)" strokeWidth="1" strokeDasharray="3 3" />
+        <rect x="250" y="380" width="80" height="100" fill="none" stroke="rgba(129, 183, 194, 0.5)" strokeWidth="1" strokeDasharray="3 3" />
+
+        <path d="M 380 200 A 40 40 0 0 1 420 240" fill="none" stroke="#81b7c2" strokeWidth="1.2" strokeDasharray="2 2" />
+        <line x1="380" y1="240" x2="420" y2="240" stroke="#81b7c2" strokeWidth="1.5" />
+
+        <line x1="120" y1="65" x2="840" y2="65" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1" />
+        <line x1="120" y1="58" x2="120" y2="72" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1" />
+        <line x1="840" y1="58" x2="840" y2="72" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1" />
+        <rect x="440" y="55" width="80" height="20" fill="#08090a" rx="3" />
+        <text x="480" y="69" fill="#f4f0e8" fontSize="11" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">24.00 m</text>
+
+        <line x1="90" y1="90" x2="90" y2="510" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1" />
+        <line x1="83" y1="90" x2="97" y2="90" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1" />
+        <line x1="83" y1="510" x2="97" y2="510" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1" />
+        <rect x="70" y="290" width="40" height="20" fill="#08090a" rx="3" />
+        <text x="90" y="304" fill="#f4f0e8" fontSize="11" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">18.00 m</text>
+
+        <text x="250" y="220" fill="#8c999c" fontSize="12" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">LIVING AREA</text>
+        <text x="500" y="220" fill="#8c999c" fontSize="12" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">HALLWAY / DINING</text>
+        <text x="730" y="300" fill="#8c999c" fontSize="12" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">MASTER BEDROOM</text>
+        <text x="250" y="440" fill="#81b7c2" fontSize="11" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">PARKING BAYS</text>
+        <text x="500" y="440" fill="#8c999c" fontSize="12" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">KITCHEN & UTILITY</text>
+
+        <text x="480" y="545" fill="#f26a3d" fontSize="11" fontFamily="IBM Plex Mono" fontWeight="600" textAnchor="middle">FRONT SETBACK ZONE (REQ 6.0m)</text>
+
+        <g transform="translate(900, 70)">
+          <circle cx="0" cy="0" r="18" fill="#111416" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="1" />
+          <polygon points="0,-12 4,2 0,0 -4,2" fill="#f26a3d" />
+          <text x="0" y="14" fill="#f4f0e8" fontSize="9" fontFamily="IBM Plex Mono" fontWeight="700" textAnchor="middle">N</text>
+        </g>
+
+        <text x="70" y="580" fill="#8c999c" fontSize="10" fontFamily="IBM Plex Mono" fontWeight="500">{filename}</text>
+      </svg>
+    </div>
   );
 }
 

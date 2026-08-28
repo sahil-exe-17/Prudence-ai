@@ -12,12 +12,14 @@
     "serve": "node scripts/serve-dist.cjs"
   },
   "dependencies": {
+    "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^5.0.4",
     "concurrently": "^9.2.1",
     "lucide-react": "^0.544.0",
     "pdfjs-dist": "^6.0.227",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@types/react": "^19.1.13",
