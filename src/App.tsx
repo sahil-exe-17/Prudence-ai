@@ -1131,7 +1131,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
             onClick={onLaunch}
             className="btn-orange glow-cta text-xs h-9 px-4 font-semibold"
           >
-            <span>Start Audit ↗</span>
+            <span>Scan Blueprint Now ⚡</span>
           </button>
         </div>
       </header>
@@ -1164,7 +1164,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
             onClick={onLaunch}
             className="btn-orange glow-cta text-sm h-11 px-8 shadow-lg font-semibold"
           >
-            <span>Start Audit ↗</span>
+            <span>Scan Blueprint Now ⚡</span>
           </button>
         </div>
       </section>
