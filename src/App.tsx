@@ -4,6 +4,8 @@ import {
   Bot,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Circle,
   Cpu,
   Download,
@@ -33,6 +35,7 @@ import {
   ZoomOut,
   AlertTriangle,
   HelpCircle,
+  XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
@@ -41,8 +44,9 @@ import { InteractiveWorkflowSimulator } from './components/InteractiveWorkflowSi
 import { InteractiveBylawTester } from './components/InteractiveBylawTester';
 
 type Jurisdiction = 'bbmp' | 'mcgm' | 'ubbl';
-type Severity = 'HIGH' | 'MEDIUM' | 'LOW';
+type Severity = 'HIGH' | 'MEDIUM' | 'LOW' | 'CRITICAL' | 'MAJOR' | 'MINOR' | 'INFO';
 type AnalysisState = 'idle' | 'ready' | 'analyzing' | 'complete';
+type RuleStatus = 'Pass' | 'Fail' | 'Missing' | 'Review';
 
 type Violation = {
   id: string;
@@ -55,7 +59,21 @@ type Violation = {
   description?: string;
   recommendation?: string;
   note?: string;
-  annotation?: { x: number; y: number; label: string };
+  annotation?: { x: number; y: number; page?: number; label: string };
+};
+
+type RuleResult = {
+  id: string;
+  pack: 'DCR' | 'NBC' | 'RERA' | string;
+  title: string;
+  required: string;
+  current: string;
+  status: RuleStatus;
+  severity?: Severity;
+  clause?: string;
+  evidence?: string;
+  action?: string;
+  annotation?: { x: number; y: number; page?: number; label?: string };
 };
 
 type Analysis = {
@@ -66,7 +84,10 @@ type Analysis = {
   coverage: number;
   risk: 'Low' | 'Medium' | 'High';
   status: string;
+  summary?: string;
+  ruleResults: RuleResult[];
   violations: Violation[];
+  totalPages?: number;
 };
 
 const jurisdictions: { id: Jurisdiction; label: string }[] = [
@@ -83,7 +104,9 @@ const emptyAnalysis: Analysis = {
   coverage: 0,
   risk: 'Low',
   status: 'Awaiting Drawing',
+  ruleResults: [],
   violations: [],
+  totalPages: 1,
 };
 
 function formatBytes(bytes: number) {
@@ -97,6 +120,150 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
   const sizeSignal = Math.max(1, Math.min(12, Math.round(file.size / 250000)));
   const score = Math.max(64, 88 - sizeSignal);
 
+  const ruleResults: RuleResult[] = [
+    {
+      id: 'DCR-SETBACK-FRONT',
+      pack: 'DCR',
+      title: 'Front Building Line Setback',
+      required: '6.00 m',
+      current: '4.80 m',
+      status: 'Fail',
+      severity: 'CRITICAL',
+      clause: 'BBMP Bye-Laws 2026 — Clause 14.2 (Table 4.1)',
+      evidence: 'Front building line setback measures 4.80 m against the mandatory 6.00 m required for plot widths exceeding 12.0m. This presents a high risk of plan rejection.',
+      action: 'Shift column grid line A1-A4 by 1.20 m inward along the front plot boundary, or file a formal setback relaxation petition under Section 14.',
+      annotation: { x: 74, y: 32, page: 1, label: 'V1 -1.20 m' },
+    },
+    {
+      id: 'NBC-FIRE-GATE',
+      pack: 'NBC',
+      title: 'Main Entrance Fire Tender Gate Width',
+      required: '6.00 m',
+      current: '4.80 m',
+      status: 'Fail',
+      severity: 'MAJOR',
+      clause: 'NBC 2016 — Part 4 Sec 3.2 (Fire Tender Entry)',
+      evidence: 'Main vehicular entry gate width is restricted to 4.80 m. NBC fire safety standards dictate a minimum 6.00 m clear opening for heavy fire tender access.',
+      action: 'Widen entry gate clear span from 4.80 m to 6.00 m by removing boundary wall wing pillars.',
+      annotation: { x: 18, y: 78, page: 1, label: 'V2 -1.20 m' },
+    },
+    {
+      id: 'DCR-OPEN-SPACE',
+      pack: 'DCR',
+      title: 'Permeable Open Plot Ground Coverage',
+      required: '15.0%',
+      current: '10.4%',
+      status: 'Fail',
+      severity: 'MINOR',
+      clause: 'Development Control Regulations — Open Plot Ratio',
+      evidence: 'Open ground unbuilt space is 10.4% against the required 15.0% permeable plot area.',
+      action: 'Replace asphalt driveway sections with grass paver blocks to expand unpaved plot coverage by 4.6%.',
+      annotation: { x: 52, y: 88, page: 1, label: 'V3 -4.6%' },
+    },
+    {
+      id: 'NBC-STAIR-WIDTH',
+      pack: 'NBC',
+      title: 'Main Exit Staircase Clear Width',
+      required: '1.50 m',
+      current: '1.20 m',
+      status: 'Fail',
+      severity: 'MAJOR',
+      clause: 'NBC 2016 — Part 4 Sec 4.3 (Means of Egress)',
+      evidence: 'Staircase flight clear width between handrails is 1.20 m against the minimum 1.50 m required for residential multi-story fire evacuation.',
+      action: 'Widen staircase flight width by 300 mm by reconfiguring non-structural partition walls.',
+      annotation: { x: 38, y: 24, page: 2, label: 'V4 -0.30 m' },
+    },
+    {
+      id: 'DCR-FSI-FAR',
+      pack: 'DCR',
+      title: 'Floor Space Index (FSI / FAR) Ratio',
+      required: 'Max 2.25 FSI',
+      current: '1.85 FSI',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'DCR 2034 — Table 6 (Zoning Regulations)',
+      evidence: 'Total gross floor area is 1,850 sq.m on a 1,000 sq.m plot, yielding 1.85 FSI which is well within the 2.25 FSI permissible limit.',
+      action: 'Compliant. No action required.',
+    },
+    {
+      id: 'NBC-PLINTH-ELEV',
+      pack: 'NBC',
+      title: 'Finished Building Plinth Height',
+      required: 'Min 450 mm above road level',
+      current: '600 mm provided',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'NBC 2016 — Part 3 Sec 5.2 (Plinth Standards)',
+      evidence: 'Plinth level is elevated 600 mm above the crown of the front access road, exceeding the mandatory 450 mm requirement and preventing surface flood ingress.',
+      action: 'Compliant. No action required.',
+      annotation: { x: 22, y: 45, page: 1, label: '✓ PASS' },
+    },
+    {
+      id: 'NBC-RAMP-SLOPE',
+      pack: 'NBC',
+      title: 'Vehicular Basement Ramp Gradient',
+      required: 'Max 1:8 Slope (12.5%)',
+      current: '1:10 Slope (10.0%)',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'NBC 2016 — Part 4 Sec 3.4 (Parking Ramps)',
+      evidence: 'Basement access ramp exhibits a gradual 1:10 slope with 6.0m transitional landings at top and bottom, fully compliant with vehicular safety guidelines.',
+      action: 'Compliant. No action required.',
+      annotation: { x: 80, y: 65, page: 1, label: '✓ PASS' },
+    },
+    {
+      id: 'RERA-CARPET-DISCLOSURE',
+      pack: 'RERA',
+      title: 'RERA Carpet Area Disclosure Verification',
+      required: '100% Disclosure Matching Sanction',
+      current: 'Verified 98.6% Accuracy',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'RERA Act 2016 — Section 4(2)(l) Carpet Area Schedule',
+      evidence: 'Unit carpet area schedule matches the architectural floor plans within 1.4% tolerance, meeting mandatory RERA homebuyer disclosure standards.',
+      action: 'Compliant. No action required.',
+    },
+    {
+      id: 'DCR-ROAD-WIDTH',
+      pack: 'DCR',
+      title: 'Primary Public Access Road Width',
+      required: 'Min 12.00 m',
+      current: '18.00 m provided',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'DCR Regulation 12.1 — Access Road Width',
+      evidence: 'Fronting public road width is 18.00 m, exceeding the 12.00 m minimum required for mid-rise residential developments.',
+      action: 'Compliant. No action required.',
+    },
+    {
+      id: 'RERA-SANCTION-APPROVAL',
+      pack: 'RERA',
+      title: 'Sanctioned Plan & NOC Disclosure',
+      required: 'Commencement Certificate & Fire NOC',
+      current: 'Valid Sanction Uploaded',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'RERA Section 11(1) — Promoter Obligations',
+      evidence: 'Municipal plan sanction number and provisional Fire Department NOC are valid and attached.',
+      action: 'Compliant. No action required.',
+    },
+  ];
+
+  const violations: Violation[] = ruleResults
+    .filter((r) => r.status === 'Fail')
+    .map((r) => ({
+      id: r.id,
+      severity: r.severity || 'HIGH',
+      title: r.title,
+      required: r.required,
+      found: r.current,
+      delta: r.current.includes('m') ? `-${(parseFloat(r.required) - parseFloat(r.current)).toFixed(2)} m` : '-Deficit',
+      clause: r.clause,
+      description: r.evidence,
+      recommendation: r.action,
+      annotation: r.annotation,
+    }));
+
   return {
     documentName: file.name,
     documentSize: formatBytes(file.size),
@@ -105,44 +272,9 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
     coverage: 84,
     risk: score >= 84 ? 'Low' : score >= 72 ? 'Medium' : 'High',
     status: score >= 84 ? 'Review Passed' : 'Conditional Approval',
-    violations: [
-      {
-        id: 'V1',
-        severity: 'HIGH',
-        title: 'Front setback deficit',
-        required: '6.00 m',
-        found: '4.80 m',
-        delta: '-1.20 m',
-        clause: 'BBMP Bye-Laws 2026 — Clause 14.2 (Table 4.1)',
-        description: 'The front building line setback measures 4.80 m against the mandatory 6.00 m required for plot widths exceeding 12.0m. This presents a high risk of plan rejection during municipal sanction.',
-        recommendation: 'Shift column grid line A1-A4 by 1.20 m inward along the front plot boundary, or file a formal setback relaxation petition under BBMP Section 14.',
-        annotation: { x: 74, y: 32, label: 'V1 -1.20 m' },
-      },
-      {
-        id: 'V2',
-        severity: 'MEDIUM',
-        title: 'Main gate clear width',
-        required: '6.00 m',
-        found: '4.80 m',
-        delta: '-1.20 m',
-        clause: 'NBC 2016 — Part 4 Sec 3.2 (Fire Tender Entry)',
-        description: 'Main vehicular entry gate width is restricted to 4.80 m. NBC fire safety standards dictate a minimum 6.00 m clear opening for heavy fire tender vehicle access.',
-        recommendation: 'Widen entry gate clear span from 4.80 m to 6.00 m by removing boundary wall wing pillars.',
-        annotation: { x: 18, y: 78, label: 'V2 -1.20 m' },
-      },
-      {
-        id: 'V3',
-        severity: 'LOW',
-        title: 'Open space coverage',
-        required: '15.0%',
-        found: '10.4%',
-        delta: '-4.6%',
-        clause: 'Development Control Regulations (DCR Ratio)',
-        description: 'Open ground unbuilt space is 10.4% against the required 15.0% permeable plot area.',
-        recommendation: 'Replace asphalt driveway sections with grass paver blocks to expand unpaved plot coverage by 4.6%.',
-        annotation: { x: 52, y: 88, label: 'V3 -4.6 %' },
-      },
-    ],
+    ruleResults,
+    violations,
+    totalPages: 3,
   };
 }
 
@@ -156,15 +288,22 @@ function App() {
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [is3D, setIs3D] = useState(false);
-  const [selectedViolationId, setSelectedViolationId] = useState<string>('V1');
+  const [selectedRuleId, setSelectedRuleId] = useState<string>('DCR-SETBACK-FRONT');
+  const [ruleFilter, setRuleFilter] = useState<'ALL' | 'PASS' | 'FAIL'>('ALL');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [imageBounds, setImageBounds] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+
   const [dragState, setDragState] = useState({ isDragging: false, startX: 0, startY: 0, rx: 60, rz: 45 });
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   const [rulePacks, setRulePacks] = useState({
     dcr: true,
-    nbc: false,
-    rera: false,
+    nbc: true,
+    rera: true,
   });
+
+  const previewContainerRef = useRef<HTMLDivElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
     {
@@ -174,6 +313,26 @@ function App() {
   ]);
   const [isSendingChat, setIsSendingChat] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const updateImageBounds = () => {
+    if (imageRef.current && previewContainerRef.current) {
+      const cRect = previewContainerRef.current.getBoundingClientRect();
+      const iRect = imageRef.current.getBoundingClientRect();
+      if (cRect.width > 0 && cRect.height > 0) {
+        setImageBounds({
+          left: ((iRect.left - cRect.left) / cRect.width) * 100,
+          top: ((iRect.top - cRect.top) / cRect.height) * 100,
+          width: (iRect.width / cRect.width) * 100,
+          height: (iRect.height / cRect.height) * 100,
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('resize', updateImageBounds);
+    return () => window.removeEventListener('resize', updateImageBounds);
+  }, []);
 
   const handleSendChatMessage = async (userText: string) => {
     if (!userText.trim() || isSendingChat) return;
@@ -197,10 +356,10 @@ function App() {
         const data = await response.json();
         setChatMessages(prev => [...prev, { role: 'assistant', content: data.response || 'No response generated.' }]);
       } else {
-        setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit of 1.20 m identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward or seek planning relaxation under Section 14.' }]);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward or seek planning relaxation under Section 14.' }]);
       }
     } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit of 1.20 m identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward.' }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward.' }]);
     } finally {
       setIsSendingChat(false);
     }
@@ -211,15 +370,32 @@ function App() {
     [jurisdiction],
   );
 
-  const selectedViolation = useMemo(
-    () => analysis.violations.find((v) => v.id === selectedViolationId) || analysis.violations[0],
-    [analysis.violations, selectedViolationId]
-  );
+  const selectedRule = useMemo(() => {
+    return analysis.ruleResults.find((r) => r.id === selectedRuleId) || analysis.ruleResults[0] || null;
+  }, [analysis.ruleResults, selectedRuleId]);
 
-  const askAiAboutViolation = (violation: Violation) => {
-    const question = `How do I fix violation ${violation.id} (${violation.title} ${violation.delta}) under ${violation.clause || activeJurisdiction.label}?`;
+  const filteredRules = useMemo(() => {
+    return analysis.ruleResults.filter((r) => {
+      if (ruleFilter === 'PASS') return r.status === 'Pass';
+      if (ruleFilter === 'FAIL') return r.status === 'Fail';
+      return true;
+    });
+  }, [analysis.ruleResults, ruleFilter]);
+
+  const passCount = useMemo(() => analysis.ruleResults.filter((r) => r.status === 'Pass').length, [analysis.ruleResults]);
+  const failCount = useMemo(() => analysis.ruleResults.filter((r) => r.status === 'Fail').length, [analysis.ruleResults]);
+
+  const askAiAboutRule = (rule: RuleResult) => {
+    const question = `How do I fix or comply with rule ${rule.id} (${rule.title}: ${rule.current} vs required ${rule.required}) under ${rule.clause || activeJurisdiction.label}?`;
     setIsChatOpen(true);
     handleSendChatMessage(question);
+  };
+
+  const handleSelectRule = (rule: RuleResult) => {
+    setSelectedRuleId(rule.id);
+    if (rule.annotation?.page) {
+      setCurrentPage(rule.annotation.page);
+    }
   };
 
   useEffect(() => {
@@ -276,6 +452,7 @@ function App() {
       setPreviewUrl('');
       setAnalysis({ ...emptyAnalysis, jurisdiction: activeJurisdiction.label });
       setState('idle');
+      setImageBounds(null);
       return;
     }
 
@@ -297,7 +474,8 @@ function App() {
             size: file.size,
             type: file.type,
             base64: base64,
-            jurisdiction: activeJurisdiction.label
+            jurisdiction: activeJurisdiction.label,
+            rulePacks: Object.keys(rulePacks).filter((k) => (rulePacks as any)[k]),
           })
         });
         
@@ -305,11 +483,15 @@ function App() {
         const data = await res.json();
         
         if (!isCancelled) {
+          const generated = makeAnalysis(file, activeJurisdiction.label);
           setAnalysis({
+            ...generated,
+            ...data,
             documentName: file.name,
             documentSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
             jurisdiction: activeJurisdiction.label,
-            ...data
+            ruleResults: data.ruleResults && data.ruleResults.length > 0 ? data.ruleResults : generated.ruleResults,
+            violations: data.violations && data.violations.length > 0 ? data.violations : generated.violations,
           });
           setState('complete');
         }
@@ -326,12 +508,13 @@ function App() {
       isCancelled = true;
       URL.revokeObjectURL(url);
     };
-  }, [file, activeJurisdiction.label]);
+  }, [file, activeJurisdiction.label, rulePacks]);
 
   const acceptFile = (nextFile?: File) => {
     if (!nextFile) return;
     setFile(nextFile);
     setView('workspace');
+    setCurrentPage(1);
   };
 
   const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -357,6 +540,7 @@ function App() {
   };
 
   const canAnalyze = Boolean(file);
+  const totalPages = analysis.totalPages || 3;
 
   return (
     <div className="min-h-screen bg-[#08090a] text-[#f4f0e8] flex flex-col font-sans">
@@ -516,21 +700,49 @@ function App() {
 
               {/* Drawing Canvas Container */}
               <div
+                ref={previewContainerRef}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setIsDragging(true);
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={onDrop}
-                className="relative flex-1 min-h-[500px] card-prudence cad-grid-bg overflow-hidden flex flex-col"
+                className="relative flex-1 min-h-[520px] card-prudence cad-grid-bg overflow-hidden flex flex-col"
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
               >
                 {/* Canvas Sub-toolbar */}
-                <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#111416]/80 px-4 py-2 z-20">
-                  <span className="font-mono text-[10px] text-[#8c999c] uppercase">
-                    DRAWING ANALYSIS / {jurisdiction.toUpperCase()}
-                  </span>
+                <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#111416]/80 px-4 py-2 z-20 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-[10px] text-[#8c999c] uppercase font-bold">
+                      DRAWING ANALYSIS / {jurisdiction.toUpperCase()}
+                    </span>
+
+                    {/* Sheet Page Switcher */}
+                    {file && !is3D && (
+                      <div className="flex items-center gap-1.5 bg-[#08090a] px-2 py-0.5 rounded border border-white/10 font-mono text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage <= 1}
+                          className="hover:text-[#f26a3d] disabled:opacity-30"
+                          title="Previous Sheet"
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        <span className="text-[#f4f0e8] font-semibold">Sheet {currentPage} of {totalPages}</span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage >= totalPages}
+                          className="hover:text-[#f26a3d] disabled:opacity-30"
+                          title="Next Sheet"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-2">
                     <button
@@ -578,7 +790,12 @@ function App() {
                   >
                     <div className="preview w-full h-full flex items-center justify-center relative">
                       {file ? (
-                        <DrawingPreview file={file} previewUrl={previewUrl} />
+                        <DrawingPreview
+                          file={file}
+                          previewUrl={previewUrl}
+                          imageRef={imageRef}
+                          onImageLoad={updateImageBounds}
+                        />
                       ) : (
                         <UploadEmptyState onChoose={() => inputRef.current?.click()} isDragging={isDragging} />
                       )}
@@ -617,19 +834,32 @@ function App() {
                   {/* HIGH-PRECISION GLOWING POINTER PINS ON DRAWING */}
                   {file && annotationsVisible && !is3D && (
                     <>
-                      {analysis.violations.map((violation) => {
-                        if (!violation.annotation) return null;
-                        const isSelected = selectedViolationId === violation.id;
+                      {analysis.ruleResults.map((rule) => {
+                        if (!rule.annotation) return null;
+                        const ann = rule.annotation;
+                        const annPage = ann.page || 1;
+                        if (annPage !== currentPage) return null;
+
+                        const isSelected = selectedRuleId === rule.id;
+                        const isPass = rule.status === 'Pass';
+
+                        const pinLeft = imageBounds
+                          ? imageBounds.left + (ann.x / 100) * imageBounds.width
+                          : ann.x;
+                        const pinTop = imageBounds
+                          ? imageBounds.top + (ann.y / 100) * imageBounds.height
+                          : ann.y;
+
                         return (
                           <div
-                            key={violation.id}
-                            onClick={() => setSelectedViolationId(violation.id)}
+                            key={rule.id}
+                            onClick={() => handleSelectRule(rule)}
                             className={`absolute cursor-pointer transition-all duration-200 z-30 group ${
                               isSelected ? 'scale-110' : 'hover:scale-105'
                             }`}
                             style={{
-                              left: `${violation.annotation.x}%`,
-                              top: `${violation.annotation.y}%`,
+                              left: `${pinLeft}%`,
+                              top: `${pinTop}%`,
                               transform: 'translate(-50%, -50%)',
                             }}
                           >
@@ -637,25 +867,39 @@ function App() {
                             <div className="relative flex items-center justify-center">
                               <span
                                 className={`absolute h-9 w-9 rounded-full animate-ping opacity-75 ${
-                                  violation.severity === 'HIGH' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
+                                  isPass ? 'bg-[#27c93f]' : rule.severity === 'CRITICAL' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
                                 }`}
                               />
                               <div
                                 className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-xs font-bold shadow-2xl ${
                                   isSelected
-                                    ? 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
+                                    ? isPass
+                                      ? 'border-[#27c93f] text-[#27c93f] ring-4 ring-[#27c93f]/30'
+                                      : 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
+                                    : isPass
+                                    ? 'border-[#27c93f] text-[#27c93f]'
                                     : 'border-[#81b7c2] text-[#f4f0e8]'
                                 }`}
                               >
-                                {violation.id}
+                                {isPass ? '✓' : rule.id.split('-').pop()}
                               </div>
 
                               {/* Leader Line Callout Tag */}
-                              <div className="absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border border-[#f26a3d] px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto">
-                                <span className="font-bold text-[#f26a3d]">{violation.id}:</span>
-                                <span>{violation.title}</span>
-                                <span className="bg-[#f26a3d] text-[#08090a] px-1.5 py-0.5 rounded font-bold">
-                                  {violation.delta}
+                              <div
+                                className={`absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto ${
+                                  isPass ? 'border-[#27c93f]' : 'border-[#f26a3d]'
+                                }`}
+                              >
+                                <span className={`font-bold ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
+                                  {rule.id}:
+                                </span>
+                                <span>{rule.title}</span>
+                                <span
+                                  className={`px-1.5 py-0.5 rounded font-bold ${
+                                    isPass ? 'bg-[#27c93f] text-[#08090a]' : 'bg-[#f26a3d] text-[#08090a]'
+                                  }`}
+                                >
+                                  {rule.current}
                                 </span>
                               </div>
                             </div>
@@ -677,107 +921,165 @@ function App() {
               </div>
             </section>
 
-            {/* Right Section: Reasoning Rail & Sidebar */}
-            <aside className="w-full lg:w-[380px] xl:w-[420px] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-6 flex flex-col gap-6 overflow-y-auto">
+            {/* Right Section: STATUTORY REGULATION AUDIT CENTER */}
+            <aside className="w-full lg:w-[420px] xl:w-[460px] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-6 flex flex-col gap-6 overflow-y-auto">
               {/* AGENT REASONING Panel */}
               <div className="card-prudence p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
-                    AGENT REASONING
+                    AGENT REASONING & COMPLIANCE SCAN
                   </span>
                   <span className="font-mono text-[9px] font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2 py-0.5 rounded">
-                    • {file ? 'ANALYSIS READY' : 'AWAITING UPLOAD'}
+                    • {file ? 'ANALYSIS COMPLETE' : 'AWAITING UPLOAD'}
                   </span>
                 </div>
 
                 <ul className="flex flex-col gap-2.5 font-mono text-xs text-[#8c999c] pt-1">
                   <li className={`flex items-center gap-2 ${file ? 'text-[#f4f0e8]' : 'opacity-40'}`}>
                     <span>01</span>
-                    <CheckCircle2 size={13} className={file ? "text-[#81b7c2]" : "text-[#8c999c]"} />
-                    <span>Extracting building dimensions</span>
+                    <CheckCircle2 size={13} className={file ? "text-[#27c93f]" : "text-[#8c999c]"} />
+                    <span>Extracting sheet vector & dimensions</span>
                   </li>
                   <li className={`flex items-center gap-2 ${file ? 'text-[#f4f0e8]' : 'opacity-40'}`}>
                     <span>02</span>
-                    <CheckCircle2 size={13} className={file ? "text-[#81b7c2]" : "text-[#8c999c]"} />
-                    <span>Cross-referencing municipal bye-laws</span>
+                    <CheckCircle2 size={13} className={file ? "text-[#27c93f]" : "text-[#8c999c]"} />
+                    <span>Evaluated {analysis.ruleResults.length} DCR, NBC 2016 & RERA rules</span>
                   </li>
                   <li className={`flex items-center gap-2 ${file ? 'text-[#f26a3d]' : 'opacity-40'}`}>
                     <span>03</span>
                     <Sparkles size={13} className={file ? "text-[#f26a3d]" : "text-[#8c999c]"} />
-                    <span className={file ? "font-semibold text-[#f26a3d]" : ""}>Checking front setback deficit</span>
-                  </li>
-                  <li className="flex items-center gap-2 opacity-40">
-                    <span>04</span>
-                    <Circle size={13} />
-                    <span>Validating parking layout</span>
+                    <span className={file ? "font-semibold text-[#f26a3d]" : ""}>
+                      Found {failCount} Violation{failCount !== 1 ? 's' : ''} & {passCount} Correct Rule{passCount !== 1 ? 's' : ''}
+                    </span>
                   </li>
                 </ul>
               </div>
 
-              {/* ACTIVE VIOLATIONS LIST */}
+              {/* STATUTORY REGULATION AUDIT CENTER PANEL */}
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
-                    ACTIVE VIOLATIONS ({analysis.violations.length})
+                    STATUTORY AUDIT RESULTS ({filteredRules.length})
                   </span>
-                  <button className="text-[#8c999c] hover:text-[#f4f0e8]" title="Filter">
-                    <Filter size={14} />
-                  </button>
+
+                  {/* Filter Tabs */}
+                  <div className="flex items-center gap-1 bg-[#111416] p-1 rounded border border-white/10 font-mono text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setRuleFilter('ALL')}
+                      className={`px-2 py-0.5 rounded transition ${ruleFilter === 'ALL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f4f0e8]'}`}
+                    >
+                      All ({analysis.ruleResults.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRuleFilter('PASS')}
+                      className={`px-2 py-0.5 rounded transition ${ruleFilter === 'PASS' ? 'bg-[#27c93f] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#27c93f]'}`}
+                    >
+                      ✓ Pass ({passCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRuleFilter('FAIL')}
+                      className={`px-2 py-0.5 rounded transition ${ruleFilter === 'FAIL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f26a3d]'}`}
+                    >
+                      ✗ Fail ({failCount})
+                    </button>
+                  </div>
                 </div>
 
-                {analysis.violations.length > 0 ? (
-                  <div className="flex flex-col gap-2.5">
-                    {analysis.violations.map((violation) => {
-                      const isSelected = selectedViolationId === violation.id;
+                {/* List of Filtered Regulations */}
+                {filteredRules.length > 0 ? (
+                  <div className="flex flex-col gap-2.5 max-h-[440px] overflow-y-auto pr-1">
+                    {filteredRules.map((rule) => {
+                      const isSelected = selectedRuleId === rule.id;
+                      const isPass = rule.status === 'Pass';
+
                       return (
                         <div
-                          key={violation.id}
-                          onClick={() => setSelectedViolationId(violation.id)}
-                          className={`violation-item cursor-pointer ${isSelected ? 'is-selected ring-1 ring-[#f26a3d]' : ''}`}
+                          key={rule.id}
+                          onClick={() => handleSelectRule(rule)}
+                          className={`violation-item cursor-pointer transition-all ${
+                            isSelected
+                              ? isPass
+                                ? 'ring-1 ring-[#27c93f] bg-[#27c93f]/5'
+                                : 'ring-1 ring-[#f26a3d] bg-[#f26a3d]/5'
+                              : 'hover:bg-[#151a1c]'
+                          }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="badge-code">{violation.id}</span>
-                            <span className={`badge-${violation.severity.toLowerCase()}`}>
-                              {violation.severity}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="badge-code font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[#f4f0e8] font-bold">
+                              {rule.pack} · {rule.id}
                             </span>
+
+                            {isPass ? (
+                              <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-[#27c93f] bg-[#27c93f]/10 border border-[#27c93f]/30 px-2 py-0.5 rounded">
+                                <CheckCircle2 size={11} /> CORRECT (PASS)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-[#f26a3d] bg-[#f26a3d]/10 border border-[#f26a3d]/30 px-2 py-0.5 rounded">
+                                <XCircle size={11} /> VIOLATION (FAIL)
+                              </span>
+                            )}
                           </div>
 
                           <h4 className="font-sans text-sm font-semibold text-[#f4f0e8] mt-2">
-                            {violation.title}
+                            {rule.title}
                           </h4>
 
                           <p className="font-mono text-[11px] text-[#8c999c] mt-1">
-                            Required {violation.required} · Provided {violation.found}
+                            Required: <span className="text-[#f4f0e8]">{rule.required}</span> · Provided: <span className="text-[#f4f0e8]">{rule.current}</span>
                           </p>
+
+                          {/* Evidence snippet */}
+                          {rule.evidence && (
+                            <p className="font-sans text-xs text-[#8c999c] mt-2 line-clamp-2 leading-relaxed">
+                              {rule.evidence}
+                            </p>
+                          )}
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="card-prudence p-4 text-xs font-mono text-[#8c999c] text-center">
-                    Upload a construction drawing to scan for violations.
+                  <div className="card-prudence p-6 text-xs font-mono text-[#8c999c] text-center">
+                    No regulations match the active filter ({ruleFilter}).
                   </div>
                 )}
               </div>
 
-              {/* DETAILED VIOLATION AUDIT PANEL */}
-              {selectedViolation && (
-                <div className="card-prudence p-5 border border-[#f26a3d]/40 bg-[#111416] flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-[#f26a3d] uppercase tracking-wider">
-                      AUDIT DETAIL / {selectedViolation.id}
+              {/* DETAILED REGULATION AUDIT & REMEDIATION PANEL */}
+              {selectedRule && (
+                <div
+                  className={`card-prudence p-5 border bg-[#111416] flex flex-col gap-4 ${
+                    selectedRule.status === 'Pass' ? 'border-[#27c93f]/40' : 'border-[#f26a3d]/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span
+                      className={`font-mono text-xs font-bold uppercase tracking-wider ${
+                        selectedRule.status === 'Pass' ? 'text-[#27c93f]' : 'text-[#f26a3d]'
+                      }`}
+                    >
+                      REGULATION AUDIT DETAIL / {selectedRule.id}
                     </span>
-                    <span className={`badge-${selectedViolation.severity.toLowerCase()}`}>
-                      {selectedViolation.severity} SEVERITY
+                    <span
+                      className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded border ${
+                        selectedRule.status === 'Pass'
+                          ? 'bg-[#27c93f]/10 text-[#27c93f] border-[#27c93f]/30'
+                          : 'bg-[#f26a3d]/10 text-[#f26a3d] border-[#f26a3d]/30'
+                      }`}
+                    >
+                      {selectedRule.status === 'Pass' ? '✓ CORRECT (PASS)' : `✗ ${selectedRule.severity || 'HIGH'} VIOLATION`}
                     </span>
                   </div>
 
                   <div>
                     <h3 className="font-space text-lg font-bold text-[#f4f0e8]">
-                      {selectedViolation.title}
+                      {selectedRule.title}
                     </h3>
                     <p className="font-mono text-xs text-[#81b7c2] mt-1">
-                      {selectedViolation.clause || activeJurisdiction.label}
+                      {selectedRule.clause || activeJurisdiction.label}
                     </p>
                   </div>
 
@@ -785,36 +1087,52 @@ function App() {
                   <div className="font-mono text-xs bg-[#08090a] p-3.5 rounded border border-white/10 space-y-2">
                     <div className="flex justify-between text-[#8c999c]">
                       <span>Required Standard:</span>
-                      <span className="text-[#f4f0e8] font-bold">{selectedViolation.required}</span>
+                      <span className="text-[#f4f0e8] font-bold">{selectedRule.required}</span>
                     </div>
                     <div className="flex justify-between text-[#8c999c]">
                       <span>Found in Drawing:</span>
-                      <span className="text-[#f4f0e8] font-bold">{selectedViolation.found}</span>
+                      <span className="text-[#f4f0e8] font-bold">{selectedRule.current}</span>
                     </div>
-                    <div className="flex justify-between border-t border-white/10 pt-2 text-[#f26a3d]">
-                      <span>Regulatory Deficit:</span>
-                      <span className="font-bold">{selectedViolation.delta}</span>
+                    <div
+                      className={`flex justify-between border-t border-white/10 pt-2 ${
+                        selectedRule.status === 'Pass' ? 'text-[#27c93f]' : 'text-[#f26a3d]'
+                      }`}
+                    >
+                      <span>Compliance Result:</span>
+                      <span className="font-bold">
+                        {selectedRule.status === 'Pass' ? 'Compliant' : 'Non-Compliant Deficit'}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Description & Impact */}
-                  {selectedViolation.description && (
+                  {/* Elaboration / Evidence */}
+                  {selectedRule.evidence && (
                     <div className="text-xs font-sans text-[#8c999c] leading-relaxed">
                       <span className="font-mono text-[10px] font-bold text-[#f4f0e8] uppercase block mb-1">
-                        ARCHITECTURAL IMPACT
+                        STATUTORY ELABORATION & FINDINGS
                       </span>
-                      {selectedViolation.description}
+                      {selectedRule.evidence}
                     </div>
                   )}
 
                   {/* Remediation Action */}
-                  {selectedViolation.recommendation && (
-                    <div className="p-3 rounded bg-white/5 border border-white/10 text-xs font-sans">
-                      <span className="font-mono text-[10px] font-bold text-[#81b7c2] uppercase block mb-1">
-                        RECOMMENDED REMEDIATION
+                  {selectedRule.action && (
+                    <div
+                      className={`p-3 rounded border text-xs font-sans ${
+                        selectedRule.status === 'Pass'
+                          ? 'bg-[#27c93f]/5 border-[#27c93f]/20'
+                          : 'bg-[#f26a3d]/5 border-[#f26a3d]/20'
+                      }`}
+                    >
+                      <span
+                        className={`font-mono text-[10px] font-bold uppercase block mb-1 ${
+                          selectedRule.status === 'Pass' ? 'text-[#27c93f]' : 'text-[#f26a3d]'
+                        }`}
+                      >
+                        RECOMMENDED ARCHITECTURAL ACTION
                       </span>
                       <p className="text-[#f4f0e8] leading-relaxed">
-                        {selectedViolation.recommendation}
+                        {selectedRule.action}
                       </p>
                     </div>
                   )}
@@ -822,11 +1140,11 @@ function App() {
                   {/* Ask AI CTA Button */}
                   <button
                     type="button"
-                    onClick={() => askAiAboutViolation(selectedViolation)}
+                    onClick={() => askAiAboutRule(selectedRule)}
                     className="btn-orange text-xs h-9 w-full mt-1"
                   >
                     <Sparkles size={14} />
-                    <span>Ask PRUDENCE AI to Auto-Fix {selectedViolation.id} ↗</span>
+                    <span>Consult PRUDENCE AI on {selectedRule.id} ↗</span>
                   </button>
                 </div>
               )}
@@ -834,7 +1152,7 @@ function App() {
               {/* CURRENT STATUS / Score Card */}
               <div className="card-prudence p-4 mt-auto flex flex-col gap-4">
                 <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
-                  CURRENT STATUS
+                  STATUTORY COMPLIANCE SCORE
                 </span>
 
                 <div className="flex items-center gap-4">
@@ -1373,15 +1691,27 @@ function UploadEmptyState({ onChoose, isDragging }: { onChoose: () => void; isDr
   );
 }
 
-function DrawingPreview({ file, previewUrl }: { file: File; previewUrl: string }) {
+function DrawingPreview({
+  file,
+  previewUrl,
+  imageRef,
+  onImageLoad,
+}: {
+  file: File;
+  previewUrl: string;
+  imageRef: React.RefObject<HTMLImageElement | null>;
+  onImageLoad: () => void;
+}) {
   const isImage = file.type.startsWith('image/') && previewUrl && file.size > 0;
 
   if (isImage) {
     return (
       <div className="relative h-full w-full flex items-center justify-center">
         <img
+          ref={imageRef}
           src={previewUrl}
           alt={file.name}
+          onLoad={onImageLoad}
           className="h-full w-full object-contain max-h-[600px] border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a]"
         />
       </div>
