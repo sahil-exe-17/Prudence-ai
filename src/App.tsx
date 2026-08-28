@@ -1337,53 +1337,29 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
                 </div>
               </div>
 
-              {/* Action Button */}
-              <button
-                type="button"
-                onClick={onLaunch}
-                className="btn-orange glow-cta w-full text-xs h-10 mt-6"
-              >
-                <span>Inspect Full Drawing in Workspace ↗</span>
-              </button>
+                {/* Status indicator */}
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between font-mono text-[10px] text-[#8c999c]">
+                  <span>MODE: DEMO PREVIEW</span>
+                  <span className="text-[#27c93f] font-bold">✓ PARSER READY</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* INTERACTIVE 3-STEP ENGINEERING SIMULATOR WORKFLOW */}
-      <section id="workflow" className="py-20 max-w-6xl mx-auto px-6 w-full relative z-10">
-        <InteractiveWorkflowSimulator onLaunch={onLaunch} />
+      <section id="workflow" className="py-16 max-w-6xl mx-auto px-6 w-full relative z-10">
+        <InteractiveWorkflowSimulator onLaunch={() => {}} />
       </section>
 
       {/* INTERACTIVE MUNICIPAL BYLAWS TESTER RADAR */}
       <section id="bylaws" className="py-16 max-w-6xl mx-auto px-6 w-full relative z-10">
-        <InteractiveBylawTester onLaunch={onLaunch} />
+        <InteractiveBylawTester onLaunch={() => {}} />
       </section>
 
-      {/* SLEEK VERCEL FOOTER CTA */}
-      <section className="py-20 max-w-5xl mx-auto px-6 w-full relative z-10">
-        <div className="p-10 text-center rounded-xl border border-white/10 bg-[#111416]">
-          <h2 className="font-space text-3xl md:text-4xl font-bold text-[#f4f0e8]">
-            Start auditing blueprints today.
-          </h2>
-          <p className="font-sans text-sm text-[#8c999c] mt-3 max-w-xl mx-auto">
-            Upload your CAD drawing package to detect setback deficits and municipal compliance issues in seconds.
-          </p>
-          <div className="mt-8 flex justify-center">
-            <button
-              type="button"
-              onClick={onLaunch}
-              className="btn-orange glow-cta text-sm h-11 px-8 shadow-lg"
-            >
-              <span>Launch Compliance Workspace ↗</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-6 text-center font-mono text-xs text-[#8c999c] relative z-10">
-        PRUDENCE AI — Architectural Code Compliance Intelligence
+      {/* Sleek Minimal Footer */}
+      <footer className="border-t border-white/10 py-8 text-center font-mono text-xs text-[#8c999c] relative z-10">
+        PRUDENCE AI — Architectural Code Compliance Intelligence Engine
       </footer>
     </div>
   );

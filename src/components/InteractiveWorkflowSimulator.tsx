@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileText, CheckCircle2, Download, ShieldCheck, Sparkles, Layers, ArrowRight } from 'lucide-react';
 
-export function InteractiveWorkflowSimulator({ onLaunch }: { onLaunch: () => void }) {
+export function InteractiveWorkflowSimulator({ onLaunch }: { onLaunch?: () => void }) {
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1);
 
   return (
@@ -102,14 +102,6 @@ export function InteractiveWorkflowSimulator({ onLaunch }: { onLaunch: () => voi
             {activeStep === 3 &&
               'Generates a certified digital audit report with exact clause references, deficiency metrics, and recommended remedies.'}
           </p>
-
-          <button
-            type="button"
-            onClick={onLaunch}
-            className="btn-cream text-xs h-10 px-5 mt-6"
-          >
-            <span>Launch Interactive Workspace ↗</span>
-          </button>
         </div>
 
         {/* Live Interactive Node Preview */}

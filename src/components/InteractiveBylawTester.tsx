@@ -20,7 +20,7 @@ const cityRules: CityRule[] = [
   { code: 'GHMC 2024', city: 'Hyderabad', name: 'GHMC Building Regulations', minFrontSetback: 5.0, maxFar: 2.40, minOpenSpacePct: 15, clause: 'High-Rise Clearance' },
 ];
 
-export function InteractiveBylawTester({ onLaunch }: { onLaunch: () => void }) {
+export function InteractiveBylawTester({ onLaunch }: { onLaunch?: () => void }) {
   const [selectedCity, setSelectedCity] = useState<CityRule>(cityRules[0]);
   const [frontSetback, setFrontSetback] = useState<number>(4.8);
   const [plotArea, setPlotArea] = useState<number>(432);
@@ -129,14 +129,6 @@ export function InteractiveBylawTester({ onLaunch }: { onLaunch: () => void }) {
               </span>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={onLaunch}
-            className="btn-cream text-xs h-10 px-6 mt-4 w-full"
-          >
-            <span>Run Full Audit on {selectedCity.code} in Workspace ↗</span>
-          </button>
         </div>
       </div>
     </div>
