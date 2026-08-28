@@ -765,15 +765,6 @@ function App() {
                       <Download size={13} />
                       <span>Export Report</span>
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={() => inputRef.current?.click()}
-                      className="btn-outline-active h-7"
-                    >
-                      <Upload size={13} />
-                      <span>{file ? 'Replace File' : 'Upload File'}</span>
-                    </button>
                   </div>
                 </div>
 
