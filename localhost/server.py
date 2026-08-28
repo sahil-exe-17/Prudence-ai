@@ -1159,7 +1159,7 @@ def groq_chat(payload: dict) -> dict:
     messages.append({"role": "user", "content": message})
 
     body = {
-        "model": os.environ.get("PRUDENCE_GROQ_MODEL", "llama-3.3-70b-versatile"),
+        "model": os.environ.get("PRUDENCE_GROQ_MODEL", "openai/gpt-oss-120b"),
         "messages": messages,
         "temperature": 0.4,
         "max_tokens": 1000,
@@ -1171,6 +1171,7 @@ def groq_chat(payload: dict) -> dict:
         headers={
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PRUDENCE-AI",
         },
         method="POST",
     )
@@ -1271,12 +1272,12 @@ class Handler(SimpleHTTPRequestHandler):
             payload = {}
 
         if self.path == "/api/chat":
-            if os.environ.get("GEMINI_API_KEY"):
-                result = gemini_chat(payload)
-            elif os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY"):
+            if os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY"):
                 result = groq_chat(payload)
+            elif os.environ.get("GEMINI_API_KEY"):
+                result = gemini_chat(payload)
             else:
-                result = {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
+                result = {"error": "Neither GROQ_API_KEY nor GEMINI_API_KEY is configured"}
         else:
             if self.path == "/api/analyze-file":
                 result = gemini_document_analysis(payload)

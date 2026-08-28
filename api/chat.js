@@ -29,11 +29,10 @@ export default async function handler(req, res) {
     const systemInstruction = `You are PRUDENCE, an AI architectural assistant. You help users understand building drawings and municipal compliance reports. Here is the parsed data of the current plan: ${JSON.stringify(analysis).slice(0, 4000)}. Keep your answers concise, helpful, professional, and well-structured using markdown tables and bullet points.`;
 
     if (groqKey) {
-      const groqModel = process.env.PRUDENCE_GROQ_MODEL || "llama-3.3-70b-versatile";
+      const groqModel = process.env.PRUDENCE_GROQ_MODEL || "openai/gpt-oss-120b";
       const messages = [{ role: "system", content: systemInstruction }];
       for (const m of history) {
-        messages.append?.({ role: m.role === "user" ? "user" : "assistant", content: m.content }) ||
-          messages.push({ role: m.role === "user" ? "user" : "assistant", content: m.content });
+        messages.push({ role: m.role === "user" ? "user" : "assistant", content: m.content });
       }
       messages.push({ role: "user", content: message });
 
@@ -42,6 +41,7 @@ export default async function handler(req, res) {
         headers: {
           Authorization: `Bearer ${groqKey}`,
           "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PRUDENCE-AI",
         },
         body: JSON.stringify({
           model: groqModel,
