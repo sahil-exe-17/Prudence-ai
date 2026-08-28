@@ -1129,9 +1129,12 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
           <button
             type="button"
             onClick={onLaunch}
-            className="btn-orange glow-cta text-xs h-9 px-4 font-semibold"
+            className="btn-crazy-glow group text-xs h-9 px-4 font-semibold gap-2"
           >
-            <span>Scan Blueprint Now ⚡</span>
+            <span>Scan Blueprint Now</span>
+            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-white/30 bg-black/30 text-white transition-transform duration-300 group-hover:translate-x-0.5">
+              <ArrowRight size={11} />
+            </div>
           </button>
         </div>
       </header>
@@ -1157,14 +1160,19 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
           Upload 2D blueprints or 3D CAD models — spot setback deficits, FSI breaches, and NBC fire safety risks before a single brick is laid.
         </p>
 
-        {/* Single Easy Primary CTA */}
+        {/* High-Tech Crazy Aesthetic Primary CTA */}
         <div className="mt-8 flex justify-center relative z-10">
           <button
             type="button"
             onClick={onLaunch}
-            className="btn-orange glow-cta text-sm h-11 px-8 shadow-lg font-semibold"
+            className="btn-crazy-glow group text-sm sm:text-base h-12 px-8 shadow-2xl gap-3"
           >
-            <span>Scan Blueprint Now ⚡</span>
+            <span className="font-space font-bold tracking-wide text-white drop-shadow-md">
+              Scan Blueprint Now
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-black/30 text-white transition-transform duration-300 group-hover:translate-x-1 group-hover:scale-110">
+              <ArrowRight size={15} />
+            </div>
           </button>
         </div>
       </section>

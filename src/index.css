@@ -546,3 +546,71 @@
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(242, 106, 61, 0.15) !important;
 }
 
+/* HIGH-TECH CRAZY AESTHETIC FUTURISTIC BUTTON */
+@keyframes crazyGradientSweep {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes crazyPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 22px rgba(242, 106, 61, 0.45), 0 0 45px rgba(242, 106, 61, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(242, 106, 61, 0.75), 0 0 65px rgba(255, 140, 0, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  }
+}
+
+.btn-crazy-glow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f26a3d 0%, #ff8c00 45%, #e65100 80%, #f26a3d 100%);
+  background-size: 200% 200%;
+  animation: crazyGradientSweep 4s linear infinite, crazyPulseGlow 2.5s ease-in-out infinite;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 25px rgba(242, 106, 61, 0.5);
+}
+
+.btn-crazy-glow::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 70%
+  );
+  transform: rotate(30deg) translateX(-100%);
+  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.btn-crazy-glow:hover::after {
+  transform: rotate(30deg) translateX(100%);
+}
+
+.btn-crazy-glow:hover {
+  transform: translateY(-3px) scale(1.04) !important;
+  box-shadow: 0 0 55px rgba(242, 106, 61, 0.9), 0 0 35px rgba(255, 140, 0, 0.75), inset 0 1px 3px rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.btn-crazy-glow:active {
+  transform: translateY(0) scale(0.97) !important;
+}
+
+
