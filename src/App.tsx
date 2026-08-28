@@ -282,7 +282,20 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
 
 function App() {
   const [view, setView] = useState<'landing' | 'workspace'>('landing');
+  const [isNavigating, setIsNavigating] = useState(false);
   const [jurisdiction, setJurisdiction] = useState<Jurisdiction>('bbmp');
+
+  const handleNavigate = (targetView: 'landing' | 'workspace') => {
+    if (view === targetView || isNavigating) return;
+    setIsNavigating(true);
+    setTimeout(() => {
+      setView(targetView);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 40);
+    }, 180);
+  };
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [analysis, setAnalysis] = useState<Analysis>(emptyAnalysis);
@@ -499,7 +512,7 @@ function App() {
   const acceptFile = (nextFile?: File) => {
     if (!nextFile) return;
     setFile(nextFile);
-    setView('workspace');
+    handleNavigate('workspace');
     setCurrentPage(1);
   };
 
@@ -538,50 +551,51 @@ function App() {
         onChange={onInputChange}
       />
 
-      {view === 'landing' ? (
-        <LandingPage
-          onLaunch={() => setView('workspace')}
-          onUpload={() => inputRef.current?.click()}
-        />
-      ) : (
-        <>
-          {/* Top Header Bar inside Workspace */}
-          <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#08090a]/90 px-6 backdrop-blur-md">
-            {/* Brand */}
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
-              <div className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-[#111416] p-1">
-                <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
+      <div className={`flex flex-col flex-1 ${isNavigating ? 'view-transition-exit' : 'view-transition-enter'}`}>
+        {view === 'landing' ? (
+          <LandingPage
+            onLaunch={() => handleNavigate('workspace')}
+            onUpload={() => inputRef.current?.click()}
+          />
+        ) : (
+          <>
+            {/* Top Header Bar inside Workspace */}
+            <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#08090a]/90 px-6 backdrop-blur-md">
+              {/* Brand */}
+              <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigate('landing')}>
+                <div className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-[#111416] p-1 transition group-hover:scale-105 group-hover:border-[#f26a3d]">
+                  <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
+                </div>
+                <span className="font-space text-base font-bold tracking-tight text-[#f4f0e8] transition group-hover:text-[#f26a3d]">PRUDENCE</span>
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c]">
+                  AI COMPLIANCE AGENT
+                </span>
               </div>
-              <span className="font-space text-base font-bold tracking-tight text-[#f4f0e8]">PRUDENCE</span>
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c]">
-                AI COMPLIANCE AGENT
-              </span>
-            </div>
 
-            {/* Center Search Box */}
-            <div className="hidden max-w-md flex-1 px-8 md:block">
-              <div className="relative flex items-center">
-                <Search className="absolute left-3 text-[#8c999c]" size={14} />
-                <input
-                  type="text"
-                  placeholder="Search regulations, projects, or clauses..."
-                  className="h-8 w-full rounded border border-[rgba(255,255,255,0.08)] bg-[#111416] pl-9 pr-8 font-sans text-xs text-[#f4f0e8] placeholder-[#8c999c] outline-none transition focus:border-[#f26a3d]"
-                />
-                <kbd className="absolute right-3 font-mono text-[10px] text-[#8c999c] bg-[#151a1c] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)]">
-                  /
-                </kbd>
+              {/* Center Search Box */}
+              <div className="hidden max-w-md flex-1 px-8 md:block">
+                <div className="relative flex items-center">
+                  <Search className="absolute left-3 text-[#8c999c]" size={14} />
+                  <input
+                    type="text"
+                    placeholder="Search regulations, projects, or clauses..."
+                    className="h-8 w-full rounded border border-[rgba(255,255,255,0.08)] bg-[#111416] pl-9 pr-8 font-sans text-xs text-[#f4f0e8] placeholder-[#8c999c] outline-none transition focus:border-[#f26a3d]"
+                  />
+                  <kbd className="absolute right-3 font-mono text-[10px] text-[#8c999c] bg-[#151a1c] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)]">
+                    /
+                  </kbd>
+                </div>
               </div>
-            </div>
 
-            {/* Right Tools */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setView('landing')}
-                className="btn-secondary text-xs"
-              >
-                <span>← Home</span>
-              </button>
+              {/* Right Tools */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleNavigate('landing')}
+                  className="btn-secondary text-xs hover:border-[#f26a3d] hover:text-[#f26a3d]"
+                >
+                  <span>← Home</span>
+                </button>
 
               <button
                 type="button"
@@ -1081,6 +1095,7 @@ function App() {
           />
         </>
       )}
+      </div>
     </div>
   );
 }

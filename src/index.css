@@ -452,3 +452,97 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* SMOOTH VIEW PAGE TRANSITION & HOVER ANIMATIONS */
+@keyframes viewPageEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.985) translateY(12px);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes viewPageExit {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.015) translateY(-8px);
+    filter: blur(6px);
+  }
+}
+
+.view-transition-enter {
+  animation: viewPageEnter 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.view-transition-exit {
+  animation: viewPageExit 0.2s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+/* SLEEK INTERACTIVE HOVER SHIMMER EFFECTS FOR BUTTONS & CARDS */
+.glow-cta {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.glow-cta::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 70%
+  );
+  transform: rotate(30deg) translateX(-100%);
+  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.glow-cta:hover::after {
+  transform: rotate(30deg) translateX(100%);
+}
+
+.glow-cta:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 30px rgba(242, 106, 61, 0.45) !important;
+}
+
+.glow-cta:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+.nav-hover-pill {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-hover-pill:hover {
+  color: #f4f0e8 !important;
+  transform: translateY(-1px);
+  text-shadow: 0 0 10px rgba(244, 240, 232, 0.4);
+}
+
+.card-hover-lift {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-3px) scale(1.005) !important;
+  border-color: rgba(242, 106, 61, 0.35) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(242, 106, 61, 0.15) !important;
+}
+
