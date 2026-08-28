@@ -377,7 +377,7 @@ function greenHeightsTrainingCase(analysis, payload, selectedIds) {
     provider: "Vercel trained rule engine",
     providerMessage: "Matched the Green Heights Residency training case and applied detailed synthetic training examples.",
     documentName: payload.filename || "Green Heights Residency demo sheet",
-    score: Math.max(20, Math.min(100, Math.round((counts.Pass / Math.max(checked, 1)) * 100) - counts.Fail * 7 - counts.Missing * 4)),
+    score: Math.round((counts.Pass / Math.max(checked, 1)) * 100),
     coverage: Math.round((counts.Pass / Math.max(checked, 1)) * 100),
     risk: counts.Fail || counts.Missing ? "High" : "Low",
     status: counts.Fail || counts.Missing ? "Rule Gaps Found" : "Compliant on Selected Rules",

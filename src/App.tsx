@@ -117,9 +117,6 @@ function formatBytes(bytes: number) {
 }
 
 function makeAnalysis(file: File, jurisdiction: string): Analysis {
-  const sizeSignal = Math.max(1, Math.min(12, Math.round(file.size / 250000)));
-  const score = Math.max(64, 88 - sizeSignal);
-
   const ruleResults: RuleResult[] = [
     {
       id: 'GH-DCR-01',
@@ -245,10 +242,14 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       status: 'Pass',
       severity: 'INFO',
       clause: 'RERA Act 2016 — Section 4(2)(l) Allottee Disclosure',
-      evidence: 'RERA compliance checklist table verifies individual unit carpet area schedule matches architect floor plan dimensions accurately.',
+      evidence: 'Unit carpet area schedule matches the architectural floor plans within 1.4% tolerance, meeting mandatory RERA homebuyer disclosure standards.',
       action: 'Compliant. Ready for statutory homebuyer agreement disclosure.',
     },
   ];
+
+  const passCount = ruleResults.filter((r) => r.status === 'Pass').length;
+  const totalRules = ruleResults.length;
+  const score = Math.round((passCount / Math.max(totalRules, 1)) * 100);
 
   const violations: Violation[] = ruleResults
     .filter((r) => r.status === 'Fail')
@@ -270,9 +271,9 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
     documentSize: formatBytes(file.size),
     jurisdiction,
     score,
-    coverage: 84,
-    risk: score >= 84 ? 'Low' : score >= 72 ? 'Medium' : 'High',
-    status: score >= 84 ? 'Review Passed' : 'Conditional Approval',
+    coverage: Math.round((passCount / Math.max(totalRules, 1)) * 100),
+    risk: score >= 70 ? 'Low' : score >= 40 ? 'Medium' : 'High',
+    status: score >= 70 ? 'Review Passed' : 'Conditional Approval',
     ruleResults,
     violations,
     totalPages: 3,
@@ -605,20 +606,20 @@ function App() {
           </header>
 
           {/* Main Workspace */}
-          <main className="flex flex-1 flex-col overflow-hidden lg:flex-row">
-            {/* Left Section: Main Analysis & Canvas */}
-            <section className="flex flex-1 flex-col gap-4 p-6 overflow-y-auto min-w-0">
+          <main className="flex flex-1 flex-col overflow-hidden lg:flex-row h-[calc(100vh-56px)]">
+            {/* Left Section: Main Analysis & Canvas (Strict Viewport Lock) */}
+            <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 overflow-hidden">
               {/* Subheader & Kicker */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#f26a3d]">
                   PRUDENCE AI / COMPLIANCE WORKSPACE
                 </span>
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
-                    <h1 className="font-space text-3xl md:text-4xl font-semibold tracking-tight text-[#f4f0e8]">
+                    <h1 className="font-space text-2xl md:text-3xl font-semibold tracking-tight text-[#f4f0e8]">
                       Drawing Analysis
                     </h1>
-                    <p className="mt-1 font-sans text-xs text-[#8c999c]">
+                    <p className="font-sans text-xs text-[#8c999c]">
                       {file ? file.name : 'See the risk before it reaches the site.'}
                     </p>
                   </div>
@@ -627,7 +628,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => inputRef.current?.click()}
-                    className="btn-orange glow-cta"
+                    className="btn-orange glow-cta text-xs h-8 px-3"
                   >
                     <span>Start new analysis</span>
                   </button>
@@ -635,14 +636,14 @@ function App() {
               </div>
 
               {/* Jurisdiction Bar & Rule Packs */}
-              <div className="flex flex-wrap items-center justify-between gap-4 card-prudence p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 card-prudence p-2.5">
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-[10px] font-semibold text-[#8c999c] uppercase">JURISDICTION</span>
                   <div className="relative">
                     <select
                       value={jurisdiction}
                       onChange={(e) => setJurisdiction(e.target.value as Jurisdiction)}
-                      className="h-8 rounded border border-[rgba(255,255,255,0.08)] bg-[#08090a] px-3 pr-8 font-mono text-xs font-semibold text-[#f4f0e8] outline-none cursor-pointer hover:border-[rgba(255,255,255,0.2)]"
+                      className="h-7 rounded border border-[rgba(255,255,255,0.08)] bg-[#08090a] px-2.5 pr-7 font-mono text-xs font-semibold text-[#f4f0e8] outline-none cursor-pointer hover:border-[rgba(255,255,255,0.2)]"
                     >
                       {jurisdictions.map((item) => (
                         <option key={item.id} value={item.id} className="bg-[#111416]">
@@ -683,7 +684,7 @@ function App() {
                 </div>
               </div>
 
-              {/* Drawing Canvas Container */}
+              {/* Drawing Canvas Container (Viewport Auto-Fit) */}
               <div
                 ref={previewContainerRef}
                 onDragOver={(e) => {
@@ -692,7 +693,7 @@ function App() {
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={onDrop}
-                className="relative flex-1 min-h-[520px] card-prudence cad-grid-bg overflow-hidden flex flex-col"
+                className="relative flex-1 card-prudence cad-grid-bg overflow-hidden flex flex-col min-h-0"
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
               >
@@ -762,8 +763,8 @@ function App() {
                   </div>
                 </div>
 
-                {/* Canvas Drawing Surface */}
-                <div className="relative flex-1 w-full h-full flex items-center justify-center p-6 overflow-hidden">
+                {/* Canvas Drawing Surface (Dynamic Height Fitting Viewport) */}
+                <div className="relative flex-1 w-full h-full flex items-center justify-center p-3 overflow-hidden min-h-0">
                   <div
                     className="preview-wrapper w-full h-full relative flex items-center justify-center"
                     style={{
@@ -808,22 +809,10 @@ function App() {
                       <div className="holo-gable gable-b" />
                     </div>
                   </div>
-
-                  {/* Center Compliance Circle Metric on Canvas */}
-                  {file && !is3D && (
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex flex-col items-center justify-center">
-                      <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#f26a3d] bg-[#08090a]/85 backdrop-blur-md shadow-[0_0_25px_rgba(242,106,61,0.3)]">
-                        <span className="font-space text-3xl font-bold text-[#f4f0e8]">{analysis.score}%</span>
-                        <span className="absolute -bottom-4 font-mono text-[9px] text-[#8c999c] uppercase tracking-wider bg-[#08090a] px-2 py-0.5 border border-[rgba(255,255,255,0.08)] rounded">
-                          COMPLIANCE
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Bottom Controls Bar */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded bg-[#111416]/90 border border-[rgba(255,255,255,0.08)] p-1 backdrop-blur-md">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded bg-[#111416]/90 border border-[rgba(255,255,255,0.08)] p-1 backdrop-blur-md">
                   <button className="tool-btn" title="Zoom in"><ZoomIn size={16} /></button>
                   <button className="tool-btn" title="Zoom out"><ZoomOut size={16} /></button>
                   <button className="tool-btn" title="Pan"><Hand size={16} /></button>
@@ -834,7 +823,7 @@ function App() {
             </section>
 
             {/* Right Section: STATUTORY REGULATION AUDIT CENTER */}
-            <aside className="w-full lg:w-[440px] xl:w-[480px] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-6 flex flex-col gap-6 overflow-y-auto">
+            <aside className="w-full lg:w-[440px] xl:w-[480px] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
               {/* AGENT REASONING Panel */}
               <div className="card-prudence p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -1594,12 +1583,12 @@ function DrawingPreview({
 
   if (isImage) {
     return (
-      <div className="relative inline-block max-h-[580px] max-w-full">
+      <div className="relative inline-flex items-center justify-center max-h-[calc(100vh-230px)] max-w-full">
         <img
           ref={imageRef}
           src={previewUrl}
           alt={file.name}
-          className="max-h-[580px] w-auto h-auto block border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a] shadow-2xl"
+          className="max-h-[calc(100vh-230px)] w-auto max-w-full block border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a] shadow-2xl object-contain"
         />
 
         {/* HIGH-PRECISION GLOWING POINTER PINS DIRECTLY ON DRAWING IMAGE BOUNDS */}
