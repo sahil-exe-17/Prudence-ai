@@ -1100,31 +1100,6 @@ function App() {
   );
 }
 
-/* CONTINUOUS LOOPING ANIMATED HEADLINE COMPONENT */
-function AnimatedHeadline({ text }: { text: string }) {
-  let charCounter = 0;
-  return (
-    <h1 className="font-outfit text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-gradient-orange leading-[1.08] max-w-4xl relative z-10">
-      {text.split(' ').map((word, wIdx) => (
-        <span key={wIdx} className="inline-block whitespace-nowrap mr-3 sm:mr-4">
-          {word.split('').map((char) => {
-            const index = charCounter++;
-            return (
-              <span
-                key={index}
-                className="animated-letter-loop"
-                style={{ animationDelay: `${index * 75}ms` }}
-              >
-                {char}
-              </span>
-            );
-          })}
-        </span>
-      ))}
-    </h1>
-  );
-}
-
 /* SLEEK VERCEL/LINEAR STYLE HUMAN SAAS LANDING PAGE COMPONENT */
 function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: () => void }) {
   const [activeTab, setActiveTab] = useState<'v1' | 'v2' | 'v3'>('v1');
@@ -1154,9 +1129,9 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
           <button
             type="button"
             onClick={onLaunch}
-            className="btn-orange glow-cta text-xs h-9 px-4"
+            className="btn-orange glow-cta text-xs h-9 px-4 font-semibold"
           >
-            <span>Launch Workspace ↗</span>
+            <span>Start Audit ↗</span>
           </button>
         </div>
       </header>
@@ -1172,31 +1147,24 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
           <span>ARCHITECTURAL BLUEPRINT CODE COMPLIANCE</span>
         </div>
 
-        {/* Animated Letter Headline with Continuous Looping Wave */}
-        <AnimatedHeadline text="Catch Building Code Violations Before Breaking Ground." />
+        {/* Clean 1-Color Space Grotesk Headline */}
+        <h1 className="font-space text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-[#f4f0e8] leading-[1.08] max-w-4xl relative z-10">
+          Catch Building Code Violations Before Breaking Ground.
+        </h1>
 
-        {/* Simple, Crazy Attractive Sentence Subtitle */}
+        {/* Simple, Attractive Sentence Subtitle */}
         <p className="mt-6 font-sans text-base sm:text-lg text-[#8c999c] max-w-2xl leading-relaxed relative z-10 backdrop-blur-xs">
           Upload 2D blueprints or 3D CAD models — spot setback deficits, FSI breaches, and NBC fire safety risks before a single brick is laid.
         </p>
 
-        {/* Dual CTAs */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4 relative z-10">
+        {/* Single Easy Primary CTA */}
+        <div className="mt-8 flex justify-center relative z-10">
           <button
             type="button"
             onClick={onLaunch}
-            className="btn-orange glow-cta text-sm h-11 px-7 shadow-lg"
+            className="btn-orange glow-cta text-sm h-11 px-8 shadow-lg font-semibold"
           >
-            <span>Launch Compliance Workspace ↗</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onUpload}
-            className="btn-cream text-sm h-11 px-6"
-          >
-            <Upload size={15} />
-            <span>Upload Blueprint (PDF / DWG)</span>
+            <span>Start Audit ↗</span>
           </button>
         </div>
       </section>
