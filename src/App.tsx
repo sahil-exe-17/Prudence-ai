@@ -122,130 +122,131 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
 
   const ruleResults: RuleResult[] = [
     {
-      id: 'DCR-SETBACK-FRONT',
+      id: 'GH-DCR-01',
       pack: 'DCR',
-      title: 'Front Building Line Setback',
-      required: '6.00 m',
-      current: '4.80 m',
+      title: 'Rear Setback Clearance',
+      required: '4.00 m minimum rear setback.',
+      current: '1.00 m provided',
       status: 'Fail',
       severity: 'CRITICAL',
-      clause: 'BBMP Bye-Laws 2026 — Clause 14.2 (Table 4.1)',
-      evidence: 'Front building line setback measures 4.80 m against the mandatory 6.00 m required for plot widths exceeding 12.0m. This presents a high risk of plan rejection.',
-      action: 'Shift column grid line A1-A4 by 1.20 m inward along the front plot boundary, or file a formal setback relaxation petition under Section 14.',
-      annotation: { x: 74, y: 32, page: 1, label: 'V1 -1.20 m' },
+      clause: 'DCR 2026 — Table 4.2 Setback Clearances',
+      evidence: 'Site plan callout VIOLATION 1 states Rear Setback Required 4.00 m, Provided 1.00 m (3.00 m deficit). This restricts rear access for service and emergency vehicles.',
+      action: 'Increase rear setback by 3.00 m or shift the rear building footprint wall inward.',
+      annotation: { x: 14.5, y: 13.0, page: 1, label: 'V1 1.00m' },
     },
     {
-      id: 'NBC-FIRE-GATE',
+      id: 'GH-DCR-02',
+      pack: 'DCR',
+      title: 'Front Setback Margin',
+      required: '6.00 m minimum front setback.',
+      current: '2.00 m provided',
+      status: 'Fail',
+      severity: 'CRITICAL',
+      clause: 'DCR 2026 — Clause 14.2 Road Frontage Setback',
+      evidence: 'Site plan callout VIOLATION 2 states Front Setback Required 6.00 m, Provided 2.00 m from 60 m wide road. 4.00 m shortfall presents high municipal rejection risk.',
+      action: 'Increase front setback by 4.00 m or move the building footprint back from the 60 m wide public road.',
+      annotation: { x: 14.5, y: 33.5, page: 1, label: 'V2 2.00m' },
+    },
+    {
+      id: 'GH-NBC-03',
       pack: 'NBC',
-      title: 'Main Entrance Fire Tender Gate Width',
-      required: '6.00 m',
-      current: '4.80 m',
+      title: 'Staircase Clear Width',
+      required: 'At least 1.20 m clear stair width.',
+      current: '0.90 m provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'NBC 2016 — Part 4 Sec 3.2 (Fire Tender Entry)',
-      evidence: 'Main vehicular entry gate width is restricted to 4.80 m. NBC fire safety standards dictate a minimum 6.00 m clear opening for heavy fire tender access.',
-      action: 'Widen entry gate clear span from 4.80 m to 6.00 m by removing boundary wall wing pillars.',
-      annotation: { x: 18, y: 78, page: 1, label: 'V2 -1.20 m' },
+      clause: 'NBC 2016 — Part 4 Sec 4.3 (Egress Stairways)',
+      evidence: 'Typical floor plan callout VIOLATION 3 states Stair Width Required >= 1.20 m, Provided 0.90 m. Restricted width impairs safe occupant egress during emergency evacuation.',
+      action: 'Widen the staircase flight by 0.30 m to meet the NBC clear width requirement.',
+      annotation: { x: 33.5, y: 16.0, page: 1, label: 'V3 0.90m' },
     },
     {
-      id: 'DCR-OPEN-SPACE',
-      pack: 'DCR',
-      title: 'Permeable Open Plot Ground Coverage',
-      required: '15.0%',
-      current: '10.4%',
-      status: 'Fail',
-      severity: 'MINOR',
-      clause: 'Development Control Regulations — Open Plot Ratio',
-      evidence: 'Open ground unbuilt space is 10.4% against the required 15.0% permeable plot area.',
-      action: 'Replace asphalt driveway sections with grass paver blocks to expand unpaved plot coverage by 4.6%.',
-      annotation: { x: 52, y: 88, page: 1, label: 'V3 -4.6%' },
-    },
-    {
-      id: 'NBC-STAIR-WIDTH',
+      id: 'GH-NBC-04',
       pack: 'NBC',
-      title: 'Main Exit Staircase Clear Width',
-      required: '1.50 m',
-      current: '1.20 m',
+      title: 'Common Corridor Clear Width',
+      required: 'At least 1.50 m clear corridor width.',
+      current: '1.20 m provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'NBC 2016 — Part 4 Sec 4.3 (Means of Egress)',
-      evidence: 'Staircase flight clear width between handrails is 1.20 m against the minimum 1.50 m required for residential multi-story fire evacuation.',
-      action: 'Widen staircase flight width by 300 mm by reconfiguring non-structural partition walls.',
-      annotation: { x: 38, y: 24, page: 2, label: 'V4 -0.30 m' },
+      clause: 'NBC 2016 — Part 4 Sec 4.2 (Corridor Standards)',
+      evidence: 'Typical floor plan callout VIOLATION 4 states Corridor Width Required >= 1.50 m, Provided 1.20 m. Corridors serving multi-unit floors require min 1.50 m clear span.',
+      action: 'Increase central corridor width by 0.30 m across the residential floor passage.',
+      annotation: { x: 35.5, y: 24.5, page: 1, label: 'V4 1.20m' },
     },
     {
-      id: 'DCR-FSI-FAR',
-      pack: 'DCR',
-      title: 'Floor Space Index (FSI / FAR) Ratio',
-      required: 'Max 2.25 FSI',
-      current: '1.85 FSI',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'DCR 2034 — Table 6 (Zoning Regulations)',
-      evidence: 'Total gross floor area is 1,850 sq.m on a 1,000 sq.m plot, yielding 1.85 FSI which is well within the 2.25 FSI permissible limit.',
-      action: 'Compliant. No action required.',
-    },
-    {
-      id: 'NBC-PLINTH-ELEV',
+      id: 'GH-NBC-05',
       pack: 'NBC',
-      title: 'Finished Building Plinth Height',
-      required: 'Min 450 mm above road level',
-      current: '600 mm provided',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'NBC 2016 — Part 3 Sec 5.2 (Plinth Standards)',
-      evidence: 'Plinth level is elevated 600 mm above the crown of the front access road, exceeding the mandatory 450 mm requirement and preventing surface flood ingress.',
-      action: 'Compliant. No action required.',
-      annotation: { x: 22, y: 45, page: 1, label: '✓ PASS' },
+      title: 'Building Overall Permissible Height',
+      required: 'Maximum permissible building height: 24.00 m.',
+      current: '24.70 m provided',
+      status: 'Fail',
+      severity: 'CRITICAL',
+      clause: 'NBC 2016 & DCR — High-Rise Height Limits',
+      evidence: 'Front elevation & section drawing show building height 24.70 m against permissible <= 24.00 m (0.70 m excess height above zoning limit).',
+      action: 'Reduce top floor parapet/headroom height by 0.70 m or obtain high-rise planning board approval.',
+      annotation: { x: 62.0, y: 28.0, page: 1, label: 'V5 24.70m' },
     },
     {
-      id: 'NBC-RAMP-SLOPE',
-      pack: 'NBC',
-      title: 'Vehicular Basement Ramp Gradient',
-      required: 'Max 1:8 Slope (12.5%)',
-      current: '1:10 Slope (10.0%)',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'NBC 2016 — Part 4 Sec 3.4 (Parking Ramps)',
-      evidence: 'Basement access ramp exhibits a gradual 1:10 slope with 6.0m transitional landings at top and bottom, fully compliant with vehicular safety guidelines.',
-      action: 'Compliant. No action required.',
-      annotation: { x: 80, y: 65, page: 1, label: '✓ PASS' },
-    },
-    {
-      id: 'RERA-CARPET-DISCLOSURE',
-      pack: 'RERA',
-      title: 'RERA Carpet Area Disclosure Verification',
-      required: '100% Disclosure Matching Sanction',
-      current: 'Verified 98.6% Accuracy',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'RERA Act 2016 — Section 4(2)(l) Carpet Area Schedule',
-      evidence: 'Unit carpet area schedule matches the architectural floor plans within 1.4% tolerance, meeting mandatory RERA homebuyer disclosure standards.',
-      action: 'Compliant. No action required.',
-    },
-    {
-      id: 'DCR-ROAD-WIDTH',
+      id: 'GH-DCR-06',
       pack: 'DCR',
-      title: 'Primary Public Access Road Width',
-      required: 'Min 12.00 m',
-      current: '18.00 m provided',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'DCR Regulation 12.1 — Access Road Width',
-      evidence: 'Fronting public road width is 18.00 m, exceeding the 12.00 m minimum required for mid-rise residential developments.',
-      action: 'Compliant. No action required.',
+      title: 'Mandatory Vehicle Parking Bays',
+      required: '42 car parking spaces required.',
+      current: '25 car parking spaces provided',
+      status: 'Fail',
+      severity: 'MAJOR',
+      clause: 'DCR Parking Regulations — Off-Street Parking Schedule',
+      evidence: 'Parking layout drawing shows 42 cars required based on residential unit count, but only 25 bays provided (17 car parking deficit).',
+      action: 'Provide 17 additional parking spaces using puzzle stackers or expanding basement 2 layout.',
+      annotation: { x: 32.0, y: 76.0, page: 1, label: 'V6 25 cars' },
     },
     {
-      id: 'RERA-SANCTION-APPROVAL',
-      pack: 'RERA',
-      title: 'Sanctioned Plan & NOC Disclosure',
-      required: 'Commencement Certificate & Fire NOC',
-      current: 'Valid Sanction Uploaded',
+      id: 'GH-DCR-PASS-01',
+      pack: 'DCR',
+      title: 'Side Setbacks (Left & Right)',
+      required: 'Minimum side setback: 3.00 m on both sides.',
+      current: 'Left side 3.00 m; Right side 3.00 m',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'RERA Section 11(1) — Promoter Obligations',
-      evidence: 'Municipal plan sanction number and provisional Fire Department NOC are valid and attached.',
-      action: 'Compliant. No action required.',
+      clause: 'DCR 2026 — Table 4.1 Side Margin Schedule',
+      evidence: 'Site plan labels show SIDE SETBACK 3.00 m provided on both left and right property boundaries, satisfying DCR open space criteria.',
+      action: 'Compliant. Both side margins meet the mandatory statutory setback threshold.',
+      annotation: { x: 8.5, y: 23.0, page: 1, label: '✓ PASS 3.0m' },
+    },
+    {
+      id: 'GH-DCR-PASS-02',
+      pack: 'DCR',
+      title: 'Public Access Road Width',
+      required: 'Minimum public street width: 6.00 m.',
+      current: '60.00 m wide road shown',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'DCR Regulation 12.1 — Access Road Standards',
+      evidence: 'Site plan frontage label displays 60.0 m wide public road, significantly exceeding the 6.00 m access minimum for residential multi-family work.',
+      action: 'Compliant. Road width is well above the statutory access requirement.',
+    },
+    {
+      id: 'GH-DCR-PASS-03',
+      pack: 'DCR',
+      title: 'FSI / Gross Built-Up Area',
+      required: 'Proposed built-up area must not exceed 3,000.00 sq.m.',
+      current: '2,850.00 sq.m proposed',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'DCR FSI Schedule — Plot FAR Utilization',
+      evidence: 'Area statement table shows permissible gross area 3,000.00 sq.m, proposed 2,850.00 sq.m (150 sq.m unutilized buffer).',
+      action: 'Compliant. Proposed floor space ratio is within permissible statutory limits.',
+    },
+    {
+      id: 'GH-RERA-PASS-04',
+      pack: 'RERA',
+      title: 'Carpet Area Schedule Disclosure',
+      required: 'Unit carpet area disclosures must match drawing schedule.',
+      current: '100% Match Verified',
+      status: 'Pass',
+      severity: 'INFO',
+      clause: 'RERA Act 2016 — Section 4(2)(l) Allottee Disclosure',
+      evidence: 'RERA compliance checklist table verifies individual unit carpet area schedule matches architect floor plan dimensions accurately.',
+      action: 'Compliant. Ready for statutory homebuyer agreement disclosure.',
     },
   ];
 
@@ -257,11 +258,11 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       title: r.title,
       required: r.required,
       found: r.current,
-      delta: r.current.includes('m') ? `-${(parseFloat(r.required) - parseFloat(r.current)).toFixed(2)} m` : '-Deficit',
+      delta: '-Deficit',
       clause: r.clause,
       description: r.evidence,
       recommendation: r.action,
-      annotation: r.annotation,
+      annotation: r.annotation ? { ...r.annotation, label: r.annotation.label || r.id } : undefined,
     }));
 
   return {
@@ -288,10 +289,9 @@ function App() {
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [is3D, setIs3D] = useState(false);
-  const [selectedRuleId, setSelectedRuleId] = useState<string>('DCR-SETBACK-FRONT');
+  const [selectedRuleId, setSelectedRuleId] = useState<string>('GH-DCR-01');
   const [ruleFilter, setRuleFilter] = useState<'ALL' | 'PASS' | 'FAIL'>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [imageBounds, setImageBounds] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
 
   const [dragState, setDragState] = useState({ isDragging: false, startX: 0, startY: 0, rx: 60, rz: 45 });
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -313,26 +313,6 @@ function App() {
   ]);
   const [isSendingChat, setIsSendingChat] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const updateImageBounds = () => {
-    if (imageRef.current && previewContainerRef.current) {
-      const cRect = previewContainerRef.current.getBoundingClientRect();
-      const iRect = imageRef.current.getBoundingClientRect();
-      if (cRect.width > 0 && cRect.height > 0) {
-        setImageBounds({
-          left: ((iRect.left - cRect.left) / cRect.width) * 100,
-          top: ((iRect.top - cRect.top) / cRect.height) * 100,
-          width: (iRect.width / cRect.width) * 100,
-          height: (iRect.height / cRect.height) * 100,
-        });
-      }
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('resize', updateImageBounds);
-    return () => window.removeEventListener('resize', updateImageBounds);
-  }, []);
 
   const handleSendChatMessage = async (userText: string) => {
     if (!userText.trim() || isSendingChat) return;
@@ -452,7 +432,6 @@ function App() {
       setPreviewUrl('');
       setAnalysis({ ...emptyAnalysis, jurisdiction: activeJurisdiction.label });
       setState('idle');
-      setImageBounds(null);
       return;
     }
 
@@ -484,20 +463,26 @@ function App() {
         
         if (!isCancelled) {
           const generated = makeAnalysis(file, activeJurisdiction.label);
+          const finalRules = data.ruleResults && data.ruleResults.length > 0 ? data.ruleResults : generated.ruleResults;
           setAnalysis({
             ...generated,
             ...data,
             documentName: file.name,
             documentSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
             jurisdiction: activeJurisdiction.label,
-            ruleResults: data.ruleResults && data.ruleResults.length > 0 ? data.ruleResults : generated.ruleResults,
+            ruleResults: finalRules,
             violations: data.violations && data.violations.length > 0 ? data.violations : generated.violations,
           });
+          if (finalRules.length > 0) {
+            setSelectedRuleId(finalRules[0].id);
+          }
           setState('complete');
         }
       } catch (err) {
         if (!isCancelled) {
-          setAnalysis(makeAnalysis(file, activeJurisdiction.label));
+          const generated = makeAnalysis(file, activeJurisdiction.label);
+          setAnalysis(generated);
+          setSelectedRuleId(generated.ruleResults[0].id);
           setState('complete');
         }
       }
@@ -794,7 +779,12 @@ function App() {
                           file={file}
                           previewUrl={previewUrl}
                           imageRef={imageRef}
-                          onImageLoad={updateImageBounds}
+                          annotationsVisible={annotationsVisible}
+                          is3D={is3D}
+                          currentPage={currentPage}
+                          selectedRuleId={selectedRuleId}
+                          analysis={analysis}
+                          onSelectRule={handleSelectRule}
                         />
                       ) : (
                         <UploadEmptyState onChoose={() => inputRef.current?.click()} isDragging={isDragging} />
@@ -830,84 +820,6 @@ function App() {
                       </div>
                     </div>
                   )}
-
-                  {/* HIGH-PRECISION GLOWING POINTER PINS ON DRAWING */}
-                  {file && annotationsVisible && !is3D && (
-                    <>
-                      {analysis.ruleResults.map((rule) => {
-                        if (!rule.annotation) return null;
-                        const ann = rule.annotation;
-                        const annPage = ann.page || 1;
-                        if (annPage !== currentPage) return null;
-
-                        const isSelected = selectedRuleId === rule.id;
-                        const isPass = rule.status === 'Pass';
-
-                        const pinLeft = imageBounds
-                          ? imageBounds.left + (ann.x / 100) * imageBounds.width
-                          : ann.x;
-                        const pinTop = imageBounds
-                          ? imageBounds.top + (ann.y / 100) * imageBounds.height
-                          : ann.y;
-
-                        return (
-                          <div
-                            key={rule.id}
-                            onClick={() => handleSelectRule(rule)}
-                            className={`absolute cursor-pointer transition-all duration-200 z-30 group ${
-                              isSelected ? 'scale-110' : 'hover:scale-105'
-                            }`}
-                            style={{
-                              left: `${pinLeft}%`,
-                              top: `${pinTop}%`,
-                              transform: 'translate(-50%, -50%)',
-                            }}
-                          >
-                            {/* Glowing Radar Beacon Target */}
-                            <div className="relative flex items-center justify-center">
-                              <span
-                                className={`absolute h-9 w-9 rounded-full animate-ping opacity-75 ${
-                                  isPass ? 'bg-[#27c93f]' : rule.severity === 'CRITICAL' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
-                                }`}
-                              />
-                              <div
-                                className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-xs font-bold shadow-2xl ${
-                                  isSelected
-                                    ? isPass
-                                      ? 'border-[#27c93f] text-[#27c93f] ring-4 ring-[#27c93f]/30'
-                                      : 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
-                                    : isPass
-                                    ? 'border-[#27c93f] text-[#27c93f]'
-                                    : 'border-[#81b7c2] text-[#f4f0e8]'
-                                }`}
-                              >
-                                {isPass ? '✓' : rule.id.split('-').pop()}
-                              </div>
-
-                              {/* Leader Line Callout Tag */}
-                              <div
-                                className={`absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto ${
-                                  isPass ? 'border-[#27c93f]' : 'border-[#f26a3d]'
-                                }`}
-                              >
-                                <span className={`font-bold ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
-                                  {rule.id}:
-                                </span>
-                                <span>{rule.title}</span>
-                                <span
-                                  className={`px-1.5 py-0.5 rounded font-bold ${
-                                    isPass ? 'bg-[#27c93f] text-[#08090a]' : 'bg-[#f26a3d] text-[#08090a]'
-                                  }`}
-                                >
-                                  {rule.current}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </>
-                  )}
                 </div>
 
                 {/* Bottom Controls Bar */}
@@ -922,7 +834,7 @@ function App() {
             </section>
 
             {/* Right Section: STATUTORY REGULATION AUDIT CENTER */}
-            <aside className="w-full lg:w-[420px] xl:w-[460px] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-6 flex flex-col gap-6 overflow-y-auto">
+            <aside className="w-full lg:w-[440px] xl:w-[480px] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-6 flex flex-col gap-6 overflow-y-auto">
               {/* AGENT REASONING Panel */}
               <div className="card-prudence p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -967,30 +879,30 @@ function App() {
                     <button
                       type="button"
                       onClick={() => setRuleFilter('ALL')}
-                      className={`px-2 py-0.5 rounded transition ${ruleFilter === 'ALL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f4f0e8]'}`}
+                      className={`px-2.5 py-1 rounded transition ${ruleFilter === 'ALL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f4f0e8]'}`}
                     >
                       All ({analysis.ruleResults.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setRuleFilter('PASS')}
-                      className={`px-2 py-0.5 rounded transition ${ruleFilter === 'PASS' ? 'bg-[#27c93f] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#27c93f]'}`}
+                      className={`px-2.5 py-1 rounded transition ${ruleFilter === 'PASS' ? 'bg-[#27c93f] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#27c93f]'}`}
                     >
                       ✓ Pass ({passCount})
                     </button>
                     <button
                       type="button"
                       onClick={() => setRuleFilter('FAIL')}
-                      className={`px-2 py-0.5 rounded transition ${ruleFilter === 'FAIL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f26a3d]'}`}
+                      className={`px-2.5 py-1 rounded transition ${ruleFilter === 'FAIL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f26a3d]'}`}
                     >
                       ✗ Fail ({failCount})
                     </button>
                   </div>
                 </div>
 
-                {/* List of Filtered Regulations */}
+                {/* EXPANDABLE ACCORDION REGULATION CARDS (UNIFIED SMOOTH COLUMN SCROLLING) */}
                 {filteredRules.length > 0 ? (
-                  <div className="flex flex-col gap-2.5 max-h-[440px] overflow-y-auto pr-1">
+                  <div className="flex flex-col gap-3">
                     {filteredRules.map((rule) => {
                       const isSelected = selectedRuleId === rule.id;
                       const isPass = rule.status === 'Pass';
@@ -999,16 +911,17 @@ function App() {
                         <div
                           key={rule.id}
                           onClick={() => handleSelectRule(rule)}
-                          className={`violation-item cursor-pointer transition-all ${
+                          className={`card-prudence p-4 cursor-pointer transition-all border ${
                             isSelected
                               ? isPass
-                                ? 'ring-1 ring-[#27c93f] bg-[#27c93f]/5'
-                                : 'ring-1 ring-[#f26a3d] bg-[#f26a3d]/5'
-                              : 'hover:bg-[#151a1c]'
+                                ? 'ring-1 ring-[#27c93f] border-[#27c93f] bg-[#27c93f]/5'
+                                : 'ring-1 ring-[#f26a3d] border-[#f26a3d] bg-[#f26a3d]/5'
+                              : 'hover:border-white/20 bg-[#111416]'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="badge-code font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[#f4f0e8] font-bold">
+                          {/* Card Top Row */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="badge-code font-mono text-[10px] px-2 py-0.5 rounded bg-white/10 text-[#f4f0e8] font-bold">
                               {rule.pack} · {rule.id}
                             </span>
 
@@ -1023,19 +936,85 @@ function App() {
                             )}
                           </div>
 
-                          <h4 className="font-sans text-sm font-semibold text-[#f4f0e8] mt-2">
+                          {/* Rule Title */}
+                          <h4 className="font-space text-base font-bold text-[#f4f0e8] mt-2">
                             {rule.title}
                           </h4>
 
-                          <p className="font-mono text-[11px] text-[#8c999c] mt-1">
-                            Required: <span className="text-[#f4f0e8]">{rule.required}</span> · Provided: <span className="text-[#f4f0e8]">{rule.current}</span>
+                          {/* Requirement vs Provided Summary */}
+                          <p className="font-mono text-xs text-[#8c999c] mt-1">
+                            Required: <span className="text-[#f4f0e8] font-semibold">{rule.required}</span> · Provided: <span className="text-[#f4f0e8] font-semibold">{rule.current}</span>
                           </p>
 
-                          {/* Evidence snippet */}
-                          {rule.evidence && (
-                            <p className="font-sans text-xs text-[#8c999c] mt-2 line-clamp-2 leading-relaxed">
-                              {rule.evidence}
-                            </p>
+                          {/* EXPANDED DETAILS INSIDE CARD WHEN SELECTED */}
+                          {isSelected && (
+                            <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-3">
+                              {/* Clause Citation */}
+                              <div className="font-mono text-xs text-[#81b7c2] font-semibold">
+                                {rule.clause || activeJurisdiction.label}
+                              </div>
+
+                              {/* Measurement Comparison Grid */}
+                              <div className="font-mono text-xs bg-[#08090a] p-3 rounded border border-white/10 space-y-1.5">
+                                <div className="flex justify-between text-[#8c999c]">
+                                  <span>Required Standard:</span>
+                                  <span className="text-[#f4f0e8] font-bold">{rule.required}</span>
+                                </div>
+                                <div className="flex justify-between text-[#8c999c]">
+                                  <span>Found in Drawing:</span>
+                                  <span className="text-[#f4f0e8] font-bold">{rule.current}</span>
+                                </div>
+                                <div className={`flex justify-between border-t border-white/10 pt-1.5 ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
+                                  <span>Compliance Status:</span>
+                                  <span className="font-bold">{isPass ? '✓ Fully Compliant' : '✗ Statutory Non-Compliance Deficit'}</span>
+                                </div>
+                              </div>
+
+                              {/* Detailed Elaboration / Evidence */}
+                              {rule.evidence && (
+                                <div className="text-xs font-sans text-[#8c999c] leading-relaxed">
+                                  <span className="font-mono text-[10px] font-bold text-[#f4f0e8] uppercase block mb-1">
+                                    STATUTORY FINDINGS & EVIDENCE
+                                  </span>
+                                  {rule.evidence}
+                                </div>
+                              )}
+
+                              {/* Recommended Remediation Action */}
+                              {rule.action && (
+                                <div
+                                  className={`p-3 rounded border text-xs font-sans ${
+                                    isPass ? 'bg-[#27c93f]/5 border-[#27c93f]/20' : 'bg-[#f26a3d]/5 border-[#f26a3d]/20'
+                                  }`}
+                                >
+                                  <span
+                                    className={`font-mono text-[10px] font-bold uppercase block mb-1 ${
+                                      isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'
+                                    }`}
+                                  >
+                                    RECOMMENDED ARCHITECTURAL ACTION
+                                  </span>
+                                  <p className="text-[#f4f0e8] leading-relaxed">
+                                    {rule.action}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    askAiAboutRule(rule);
+                                  }}
+                                  className="btn-orange text-xs h-8 flex-1"
+                                >
+                                  <Sparkles size={13} />
+                                  <span>Consult PRUDENCE AI ↗</span>
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       );
@@ -1047,107 +1026,6 @@ function App() {
                   </div>
                 )}
               </div>
-
-              {/* DETAILED REGULATION AUDIT & REMEDIATION PANEL */}
-              {selectedRule && (
-                <div
-                  className={`card-prudence p-5 border bg-[#111416] flex flex-col gap-4 ${
-                    selectedRule.status === 'Pass' ? 'border-[#27c93f]/40' : 'border-[#f26a3d]/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span
-                      className={`font-mono text-xs font-bold uppercase tracking-wider ${
-                        selectedRule.status === 'Pass' ? 'text-[#27c93f]' : 'text-[#f26a3d]'
-                      }`}
-                    >
-                      REGULATION AUDIT DETAIL / {selectedRule.id}
-                    </span>
-                    <span
-                      className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded border ${
-                        selectedRule.status === 'Pass'
-                          ? 'bg-[#27c93f]/10 text-[#27c93f] border-[#27c93f]/30'
-                          : 'bg-[#f26a3d]/10 text-[#f26a3d] border-[#f26a3d]/30'
-                      }`}
-                    >
-                      {selectedRule.status === 'Pass' ? '✓ CORRECT (PASS)' : `✗ ${selectedRule.severity || 'HIGH'} VIOLATION`}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-space text-lg font-bold text-[#f4f0e8]">
-                      {selectedRule.title}
-                    </h3>
-                    <p className="font-mono text-xs text-[#81b7c2] mt-1">
-                      {selectedRule.clause || activeJurisdiction.label}
-                    </p>
-                  </div>
-
-                  {/* Measurement Table */}
-                  <div className="font-mono text-xs bg-[#08090a] p-3.5 rounded border border-white/10 space-y-2">
-                    <div className="flex justify-between text-[#8c999c]">
-                      <span>Required Standard:</span>
-                      <span className="text-[#f4f0e8] font-bold">{selectedRule.required}</span>
-                    </div>
-                    <div className="flex justify-between text-[#8c999c]">
-                      <span>Found in Drawing:</span>
-                      <span className="text-[#f4f0e8] font-bold">{selectedRule.current}</span>
-                    </div>
-                    <div
-                      className={`flex justify-between border-t border-white/10 pt-2 ${
-                        selectedRule.status === 'Pass' ? 'text-[#27c93f]' : 'text-[#f26a3d]'
-                      }`}
-                    >
-                      <span>Compliance Result:</span>
-                      <span className="font-bold">
-                        {selectedRule.status === 'Pass' ? 'Compliant' : 'Non-Compliant Deficit'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Elaboration / Evidence */}
-                  {selectedRule.evidence && (
-                    <div className="text-xs font-sans text-[#8c999c] leading-relaxed">
-                      <span className="font-mono text-[10px] font-bold text-[#f4f0e8] uppercase block mb-1">
-                        STATUTORY ELABORATION & FINDINGS
-                      </span>
-                      {selectedRule.evidence}
-                    </div>
-                  )}
-
-                  {/* Remediation Action */}
-                  {selectedRule.action && (
-                    <div
-                      className={`p-3 rounded border text-xs font-sans ${
-                        selectedRule.status === 'Pass'
-                          ? 'bg-[#27c93f]/5 border-[#27c93f]/20'
-                          : 'bg-[#f26a3d]/5 border-[#f26a3d]/20'
-                      }`}
-                    >
-                      <span
-                        className={`font-mono text-[10px] font-bold uppercase block mb-1 ${
-                          selectedRule.status === 'Pass' ? 'text-[#27c93f]' : 'text-[#f26a3d]'
-                        }`}
-                      >
-                        RECOMMENDED ARCHITECTURAL ACTION
-                      </span>
-                      <p className="text-[#f4f0e8] leading-relaxed">
-                        {selectedRule.action}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Ask AI CTA Button */}
-                  <button
-                    type="button"
-                    onClick={() => askAiAboutRule(selectedRule)}
-                    className="btn-orange text-xs h-9 w-full mt-1"
-                  >
-                    <Sparkles size={14} />
-                    <span>Consult PRUDENCE AI on {selectedRule.id} ↗</span>
-                  </button>
-                </div>
-              )}
 
               {/* CURRENT STATUS / Score Card */}
               <div className="card-prudence p-4 mt-auto flex flex-col gap-4">
@@ -1695,30 +1573,183 @@ function DrawingPreview({
   file,
   previewUrl,
   imageRef,
-  onImageLoad,
+  annotationsVisible,
+  is3D,
+  currentPage,
+  selectedRuleId,
+  analysis,
+  onSelectRule,
 }: {
   file: File;
   previewUrl: string;
   imageRef: React.RefObject<HTMLImageElement | null>;
-  onImageLoad: () => void;
+  annotationsVisible: boolean;
+  is3D: boolean;
+  currentPage: number;
+  selectedRuleId: string;
+  analysis: Analysis;
+  onSelectRule: (rule: RuleResult) => void;
 }) {
   const isImage = file.type.startsWith('image/') && previewUrl && file.size > 0;
 
   if (isImage) {
     return (
-      <div className="relative h-full w-full flex items-center justify-center">
+      <div className="relative inline-block max-h-[580px] max-w-full">
         <img
           ref={imageRef}
           src={previewUrl}
           alt={file.name}
-          onLoad={onImageLoad}
-          className="h-full w-full object-contain max-h-[600px] border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a]"
+          className="max-h-[580px] w-auto h-auto block border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a] shadow-2xl"
         />
+
+        {/* HIGH-PRECISION GLOWING POINTER PINS DIRECTLY ON DRAWING IMAGE BOUNDS */}
+        {annotationsVisible && !is3D && (
+          <>
+            {analysis.ruleResults.map((rule) => {
+              if (!rule.annotation) return null;
+              const ann = rule.annotation;
+              const annPage = ann.page || 1;
+              if (annPage !== currentPage) return null;
+
+              const isSelected = selectedRuleId === rule.id;
+              const isPass = rule.status === 'Pass';
+
+              return (
+                <div
+                  key={rule.id}
+                  onClick={() => onSelectRule(rule)}
+                  className={`absolute cursor-pointer transition-all duration-200 z-30 group ${
+                    isSelected ? 'scale-110' : 'hover:scale-105'
+                  }`}
+                  style={{
+                    left: `${ann.x}%`,
+                    top: `${ann.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  {/* Glowing Radar Beacon Target */}
+                  <div className="relative flex items-center justify-center">
+                    <span
+                      className={`absolute h-9 w-9 rounded-full animate-ping opacity-75 ${
+                        isPass ? 'bg-[#27c93f]' : rule.severity === 'CRITICAL' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
+                      }`}
+                    />
+                    <div
+                      className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-xs font-bold shadow-2xl ${
+                        isSelected
+                          ? isPass
+                            ? 'border-[#27c93f] text-[#27c93f] ring-4 ring-[#27c93f]/30'
+                            : 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
+                          : isPass
+                          ? 'border-[#27c93f] text-[#27c93f]'
+                          : 'border-[#81b7c2] text-[#f4f0e8]'
+                      }`}
+                    >
+                      {isPass ? '✓' : rule.id.split('-').pop()}
+                    </div>
+
+                    {/* Leader Line Callout Tag */}
+                    <div
+                      className={`absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto ${
+                        isPass ? 'border-[#27c93f]' : 'border-[#f26a3d]'
+                      }`}
+                    >
+                      <span className={`font-bold ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
+                        {rule.id}:
+                      </span>
+                      <span>{rule.title}</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded font-bold ${
+                          isPass ? 'bg-[#27c93f] text-[#08090a]' : 'bg-[#f26a3d] text-[#08090a]'
+                        }`}
+                      >
+                        {rule.current}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
     );
   }
 
-  return <CadBlueprintGraphic filename={file.name} />;
+  return (
+    <div className="relative inline-block w-full h-full max-h-[620px]">
+      <CadBlueprintGraphic filename={file.name} />
+
+      {/* HIGH-PRECISION POINTER PINS ON VECTOR SVG GRAPHIC */}
+      {annotationsVisible && !is3D && (
+        <>
+          {analysis.ruleResults.map((rule) => {
+            if (!rule.annotation) return null;
+            const ann = rule.annotation;
+            const annPage = ann.page || 1;
+            if (annPage !== currentPage) return null;
+
+            const isSelected = selectedRuleId === rule.id;
+            const isPass = rule.status === 'Pass';
+
+            return (
+              <div
+                key={rule.id}
+                onClick={() => onSelectRule(rule)}
+                className={`absolute cursor-pointer transition-all duration-200 z-30 group ${
+                  isSelected ? 'scale-110' : 'hover:scale-105'
+                }`}
+                style={{
+                  left: `${ann.x}%`,
+                  top: `${ann.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <div className="relative flex items-center justify-center">
+                  <span
+                    className={`absolute h-9 w-9 rounded-full animate-ping opacity-75 ${
+                      isPass ? 'bg-[#27c93f]' : rule.severity === 'CRITICAL' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
+                    }`}
+                  />
+                  <div
+                    className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-xs font-bold shadow-2xl ${
+                      isSelected
+                        ? isPass
+                          ? 'border-[#27c93f] text-[#27c93f] ring-4 ring-[#27c93f]/30'
+                          : 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
+                        : isPass
+                        ? 'border-[#27c93f] text-[#27c93f]'
+                        : 'border-[#81b7c2] text-[#f4f0e8]'
+                    }`}
+                  >
+                    {isPass ? '✓' : rule.id.split('-').pop()}
+                  </div>
+
+                  <div
+                    className={`absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto ${
+                      isPass ? 'border-[#27c93f]' : 'border-[#f26a3d]'
+                    }`}
+                  >
+                    <span className={`font-bold ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
+                      {rule.id}:
+                    </span>
+                    <span>{rule.title}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded font-bold ${
+                        isPass ? 'bg-[#27c93f] text-[#08090a]' : 'bg-[#f26a3d] text-[#08090a]'
+                      }`}
+                    >
+                      {rule.current}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
 }
 
 function CadBlueprintGraphic({ filename }: { filename: string }) {
