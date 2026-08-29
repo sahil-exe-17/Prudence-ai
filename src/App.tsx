@@ -1465,6 +1465,33 @@ function FormattedMarkdownText({ content }: { content: string }) {
     });
   };
 
+  const parseWorkflowSteps = (text: string) => {
+    const stepBlocks = text
+      .split(/(?=\[\s*Step\s*\d+|Step\s*\d+|\d+️⃣)/i)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    if (stepBlocks.length < 2) return null;
+
+    return stepBlocks.map((block, idx) => {
+      const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
+      const firstLine = lines[0] || '';
+      const titleMatch = firstLine.match(/\[?\s*(?:Step\s*\d+|^\d+️⃣)?\s*:?\s*([^\]]+)\]?/i);
+      const title = titleMatch ? titleMatch[1].trim() : firstLine.replace(/^[^a-zA-Z0-9]+/, '');
+      const description = lines
+        .slice(1)
+        .join(' ')
+        .replace(/^[➔\->=]+\s*/, '')
+        .trim();
+
+      return {
+        stepNum: String(idx + 1).padStart(2, '0'),
+        title: title || `Step ${idx + 1}`,
+        description: description || '',
+      };
+    });
+  };
+
   const blocks = parseMarkdownBlocks(content);
 
   return (
@@ -1472,7 +1499,51 @@ function FormattedMarkdownText({ content }: { content: string }) {
       {blocks.map((block, idx) => {
         if (block.type === 'code' && block.content) {
           const { lang, code } = block.content;
-          const isWorkflow = lang === 'mermaid' || lang === 'workflow' || code.includes('-->') || code.includes('->') || code.includes('➔');
+          const isWorkflow =
+            lang === 'mermaid' ||
+            lang === 'workflow' ||
+            code.includes('-->') ||
+            code.includes('->') ||
+            code.includes('➔') ||
+            code.includes('[ Step');
+          const steps = isWorkflow ? parseWorkflowSteps(code) : null;
+
+          if (steps && steps.length > 0) {
+            return (
+              <div key={idx} className="my-4 p-4 rounded-xl border border-[#f26a3d]/35 bg-[#08090a] shadow-2xl space-y-3">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping" />
+                    ⚡ VISUAL WORKFLOW & PROCESS DIAGRAM
+                  </span>
+                  <span className="text-[#8c999c] font-mono">{steps.length} STAGES</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {steps.map((step, sIdx) => (
+                    <div
+                      key={sIdx}
+                      className="group relative flex flex-col gap-1.5 p-3.5 rounded-lg border border-white/10 bg-[#111416] hover:border-[#f26a3d]/60 hover:bg-[#151a1c] transition-all shadow-md"
+                    >
+                      <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#f26a3d]">
+                        <span>STEP {step.stepNum}</span>
+                        <span className="text-[#81b7c2] group-hover:translate-x-1 transition-transform">➔</span>
+                      </div>
+                      <div className="font-space text-xs font-bold text-[#f4f0e8] leading-tight">
+                        {renderInlineFormatting(step.title)}
+                      </div>
+                      {step.description && (
+                        <div className="font-sans text-[11px] text-[#8c999c] leading-relaxed pt-1 border-t border-white/5">
+                          {renderInlineFormatting(step.description)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
               <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
