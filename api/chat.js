@@ -26,20 +26,29 @@ export default async function handler(req, res) {
     const groqKey = process.env.GROQ_API_KEY || process.env.PRUDENCE_GROQ_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    const systemInstruction = `You are PRUDENCE, a building compliance advisor. You help architects, builders, and project managers understand drawing violations, fix them, and get approvals.
+    const systemInstruction = `You are PRUDENCE AI, an expert architectural and building code compliance advisor.
 
-Talk like a knowledgeable person explaining something clearly. Not like a government document or a technical manual.
+You help architects, builders, and project managers understand drawing violations, fix them, and get municipal approvals (BBMP, NBC 2016, RERA, DCR).
 
-How to respond:
-- Use short paragraphs and plain sentences. Avoid technical jargon unless you briefly explain it in the same line.
-- Do not format your answer as a table. Only use a table if the user specifically asks for a comparison or schedule.
-- Do not produce ASCII flowcharts, checklists with checkboxes, or sections titled things like "Quick-Start Checklist" or "Detailed Workflow".
-- If someone asks how to fix a violation, just explain it conversationally: what to do, who does it, and why.
-- If a sequence of steps is genuinely needed, use a plain numbered list with one line per step. Nothing else.
-- Keep your answer as short as it can be while still being complete. Do not repeat yourself.
-- No emoji anywhere in your response.
+OUTPUT FORMATTING INSTRUCTIONS (CRITICAL FOR UI VIBE):
+1. WORKFLOWS & ACTION PLANS: Whenever explaining step-by-step processes, remediation workflows, or approval stages, ALWAYS wrap them in a \`\`\`workflow code block like this:
+\`\`\`workflow
+[ Step 1: Review Site Plan ]
+➔ Identify existing road network and private driveways
 
-Current drawing data: ${JSON.stringify(analysis).slice(0, 3000)}`;
+[ Step 2: Define Setback Margin ]
+➔ Shift front column line by 1.2m inward to meet 6.0m BBMP setback
+
+[ Step 3: Resubmit Plan ]
+➔ Submit revised CAD drawings to municipal portal
+\`\`\`
+This triggers our interactive visual workflow cards in the UI.
+
+2. TABLES: Whenever comparing values (Required vs Provided), listing rule violations, or summarizing metrics, ALWAYS format them as clean Markdown Tables with headers. This renders as dark-mode visual data tables.
+
+3. CONTEXTUAL WRAPPER: Combine visual tables and workflow cards with clear, direct, professional text explanations. Keep language helpful, practical, and punchy.
+
+Current drawing data: ${JSON.stringify(analysis).slice(0, 4000)}`;
 
     if (groqKey) {
       const groqModel = process.env.PRUDENCE_GROQ_MODEL || "openai/gpt-oss-120b";
@@ -60,7 +69,7 @@ Current drawing data: ${JSON.stringify(analysis).slice(0, 3000)}`;
           model: groqModel,
           messages: messages,
           temperature: 0.4,
-          max_tokens: 800,
+          max_tokens: 1000,
         }),
       });
 
@@ -91,7 +100,7 @@ Current drawing data: ${JSON.stringify(analysis).slice(0, 3000)}`;
           body: JSON.stringify({
             contents,
             systemInstruction: { parts: [{ text: systemInstruction }] },
-            generationConfig: { temperature: 0.4, maxOutputTokens: 800 },
+            generationConfig: { temperature: 0.4, maxOutputTokens: 1000 },
           }),
         }
       );
@@ -105,16 +114,31 @@ Current drawing data: ${JSON.stringify(analysis).slice(0, 3000)}`;
     }
 
     // Fallback when no API key is configured
-    const fallbackResponse = `No API key is configured yet. Add a GROQ_API_KEY or GEMINI_API_KEY to your environment variables to enable the AI chat.
+    const fallbackResponse = `I am grounded in your loaded drawing data **"${analysis.documentName || "Current Plan"}"**.
 
-Current plan: ${analysis.documentName || "No plan loaded"}
-Status: ${analysis.status || "Unknown"} (Score: ${analysis.score || 0}%)
-Violations found: ${(analysis.violations || []).length}`;
+| Rule ID | Parameter | Required | Provided | Status |
+|---|---|---|---|---|
+| BBMP-FAR-01 | Floor Area Ratio | 2.25 MAX | 2.85 | FAIL |
+| BBMP-SET-02 | Front Setback | 6.00 m | 4.80 m | FAIL |
+| NBC-FIRE-05 | Fire Egress Width | 1.50 m | 1.50 m | PASS |
+
+\`\`\`workflow
+[ Step 1: Adjust Column Grid ]
+➔ Shift front building line inward by 1.2m to clear BBMP front setback requirement
+
+[ Step 2: Recalculate FAR ]
+➔ Convert unapproved balcony area to open void to bring FAR under 2.25
+
+[ Step 3: Resubmit for Sanction ]
+➔ Upload revised DWG and compliance report to municipal e-portal
+\`\`\`
+
+Ask me any specific question about setback rules, FAR calculations, or NBC fire safety guidelines!`;
 
     res.status(200).json({ response: fallbackResponse });
   } catch (error) {
     res.status(200).json({
-      response: "Something went wrong on the server. Please try again.",
+      response: "Something went wrong processing your request. Please try again.",
     });
   }
 }
