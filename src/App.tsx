@@ -305,6 +305,19 @@ function App() {
   const [is3D, setIs3D] = useState(false);
   const [selectedRuleId, setSelectedRuleId] = useState<string>('GH-DCR-01');
   const [ruleFilter, setRuleFilter] = useState<'ALL' | 'PASS' | 'FAIL'>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [dragState, setDragState] = useState({ isDragging: false, startX: 0, startY: 0, rx: 60, rz: 45 });
