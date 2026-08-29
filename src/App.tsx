@@ -364,20 +364,30 @@ function App() {
     [jurisdiction],
   );
 
+  const isRulePass = (r: RuleResult) => {
+    const s = String(r.status || '').trim().toLowerCase();
+    return s === 'pass' || s === 'compliant' || s === 'ok' || s === 'correct' || s === 'verified';
+  };
+
+  const isRuleFail = (r: RuleResult) => {
+    const s = String(r.status || '').trim().toLowerCase();
+    return s === 'fail' || s === 'violation' || s === 'critical' || s === 'major' || s === 'minor' || s === 'non-compliant' || s === 'defect' || s === 'failed';
+  };
+
   const selectedRule = useMemo(() => {
     return analysis.ruleResults.find((r) => r.id === selectedRuleId) || analysis.ruleResults[0] || null;
   }, [analysis.ruleResults, selectedRuleId]);
 
   const filteredRules = useMemo(() => {
     return analysis.ruleResults.filter((r) => {
-      if (ruleFilter === 'PASS') return r.status === 'Pass';
-      if (ruleFilter === 'FAIL') return r.status === 'Fail';
+      if (ruleFilter === 'PASS') return isRulePass(r);
+      if (ruleFilter === 'FAIL') return isRuleFail(r) || !isRulePass(r);
       return true;
     });
   }, [analysis.ruleResults, ruleFilter]);
 
-  const passCount = useMemo(() => analysis.ruleResults.filter((r) => r.status === 'Pass').length, [analysis.ruleResults]);
-  const failCount = useMemo(() => analysis.ruleResults.filter((r) => r.status === 'Fail').length, [analysis.ruleResults]);
+  const passCount = useMemo(() => analysis.ruleResults.filter((r) => isRulePass(r)).length, [analysis.ruleResults]);
+  const failCount = useMemo(() => analysis.ruleResults.filter((r) => isRuleFail(r) || !isRulePass(r)).length, [analysis.ruleResults]);
 
   const askAiAboutRule = (rule: RuleResult) => {
     const question = `How do I fix or comply with rule ${rule.id} (${rule.title}: ${rule.current} vs required ${rule.required}) under ${rule.clause || activeJurisdiction.label}?`;
@@ -899,7 +909,7 @@ function App() {
                   <div className="flex flex-col gap-3">
                     {filteredRules.map((rule) => {
                       const isSelected = selectedRuleId === rule.id;
-                      const isPass = rule.status === 'Pass';
+                      const isPass = isRulePass(rule);
 
                       return (
                         <div
