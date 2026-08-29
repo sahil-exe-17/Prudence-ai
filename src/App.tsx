@@ -887,71 +887,95 @@ function App() {
 
             {/* Right Panel - scrollable independently */}
             <aside className="w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
-              {/* GOATED STATUTORY COMPLIANCE RADAR & SCORE CARD */}
-              <div className="card-prudence p-4 flex flex-col gap-4 relative overflow-hidden group hover:border-[#f26a3d]/60 transition-all duration-500 shadow-2xl">
-                {/* Ambient Background Glow Mesh */}
-                <div className="absolute -right-8 -top-8 w-32 h-32 bg-[#f26a3d]/10 rounded-full blur-2xl group-hover:bg-[#f26a3d]/20 transition-all duration-500 pointer-events-none" />
+              {/* ULTRA-SIMPLE, GOATED COMPLIANCE RADAR CARD */}
+              <div className="card-prudence p-5 flex flex-col items-center text-center relative overflow-hidden group hover:border-[#f26a3d]/70 transition-all duration-500 shadow-2xl rounded-2xl">
+                {/* Ambient Background Radial Glow */}
+                <div className={`absolute inset-0 bg-gradient-to-b ${
+                  !file || failCount === 0
+                    ? 'from-[#27c93f]/10 to-transparent'
+                    : failCount <= 2
+                    ? 'from-[#f26a3d]/10 to-transparent'
+                    : 'from-[#ff4d4d]/10 to-transparent'
+                } opacity-60 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
 
                 {/* Header Title */}
-                <div className="flex items-center justify-between z-10">
-                  <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider flex items-center gap-1.5">
-                    <Shield size={13} className="text-[#f26a3d]" />
-                    STATUTORY COMPLIANCE RADAR
-                  </span>
-                  <span className="font-mono text-[9px] font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#27c93f] animate-ping" />
-                    {file ? 'SCAN COMPLETE' : 'AWAITING UPLOAD'}
+                <div className="w-full flex items-center justify-between z-10 mb-4 font-mono text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-[#8c999c] tracking-wider uppercase">
+                    <Shield size={14} className="text-[#f26a3d]" />
+                    <span>STATUTORY RADAR</span>
+                  </div>
+                  <span className="font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2.5 py-0.5 rounded-full text-[10px] flex items-center gap-1.5">
+                    <span className={`h-2 w-2 rounded-full animate-ping ${!file ? 'bg-[#8c999c]' : failCount === 0 ? 'bg-[#27c93f]' : 'bg-[#ff4d4d]'}`} />
+                    {file ? 'ACTIVE AUDIT' : 'STANDBY'}
                   </span>
                 </div>
 
-                {/* Main Score & Risk Grid */}
-                <div className="grid grid-cols-2 gap-3 z-10">
-                  {/* Compliance Score Tile */}
-                  <div className="flex flex-col p-3 rounded-xl border border-white/10 bg-[#111416] hover:border-[#f26a3d]/50 transition-all duration-300 shadow-md">
-                    <span className="font-mono text-[9px] font-semibold text-[#8c999c] uppercase">COMPLIANCE SCORE</span>
-                    <div className="flex items-baseline gap-1 mt-1">
-                      <span className="font-space text-3xl font-extrabold text-[#f4f0e8] tracking-tight">
-                        {file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%
-                      </span>
-                      <span className="font-mono text-[10px] text-[#27c93f] font-bold">ACCURACY</span>
-                    </div>
-                    {/* Animated Glowing Progress Bar */}
-                    <div className="w-full h-1.5 bg-white/10 rounded-full mt-2.5 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#f26a3d] to-[#27c93f] transition-all duration-1000 ease-out shadow-[0_0_10px_#f26a3d]"
-                        style={{ width: `${file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Risk Level Tile */}
-                  <div className="flex flex-col p-3 rounded-xl border border-white/10 bg-[#111416] hover:border-[#f26a3d]/50 transition-all duration-300 shadow-md">
-                    <span className="font-mono text-[9px] font-semibold text-[#8c999c] uppercase">RISK ASSESSMENT</span>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <span className={`font-space text-xs sm:text-sm font-extrabold px-2.5 py-1 rounded-md border uppercase tracking-wider ${
+                {/* Glowing Radial Progress Dial */}
+                <div className="relative flex items-center justify-center my-2 z-10">
+                  <svg className="w-36 h-36 transform -rotate-90">
+                    <circle
+                      cx="72"
+                      cy="72"
+                      r="58"
+                      stroke="currentColor"
+                      strokeWidth="10"
+                      className="text-white/10"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="72"
+                      cy="72"
+                      r="58"
+                      stroke="currentColor"
+                      strokeWidth="10"
+                      strokeDasharray={364}
+                      strokeDashoffset={364 - (364 * (file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0)) / 100}
+                      strokeLinecap="round"
+                      className={`transition-all duration-1000 ease-out ${
                         !file || failCount === 0
-                          ? 'bg-[#27c93f]/15 border-[#27c93f]/40 text-[#27c93f]'
+                          ? 'text-[#27c93f] drop-shadow-[0_0_12px_rgba(39,201,63,0.8)]'
                           : failCount <= 2
-                          ? 'bg-[#f26a3d]/15 border-[#f26a3d]/40 text-[#f26a3d]'
-                          : 'bg-[#ff4d4d]/15 border-[#ff4d4d]/40 text-[#ff4d4d]'
-                      }`}>
-                        {!file ? 'NONE' : failCount === 0 ? 'LOW RISK' : failCount <= 2 ? 'MODERATE' : 'HIGH RISK'}
-                      </span>
-                    </div>
-                    <span className="font-mono text-[10px] text-[#8c999c] mt-2">
-                      {file ? `${failCount} Violation${failCount !== 1 ? 's' : ''} detected` : 'Upload drawing to scan'}
+                          ? 'text-[#f26a3d] drop-shadow-[0_0_12px_rgba(242,106,61,0.8)]'
+                          : 'text-[#ff4d4d] drop-shadow-[0_0_12px_rgba(255,77,77,0.8)]'
+                      }`}
+                      fill="transparent"
+                    />
+                  </svg>
+
+                  <div className="absolute flex flex-col items-center justify-center leading-none">
+                    <span className="font-space text-4xl font-extrabold tracking-tight text-[#f4f0e8]">
+                      {file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%
+                    </span>
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#8c999c] mt-1">
+                      COMPLIANCE
                     </span>
                   </div>
                 </div>
 
-                {/* Active Code Coverage Bar */}
-                <div className="flex items-center justify-between p-2.5 rounded-lg border border-white/5 bg-[#151a1c] font-mono text-xs z-10">
-                  <div className="flex items-center gap-2">
-                    <Cpu size={14} className="text-[#81b7c2]" />
-                    <span className="text-[#8c999c]">CODE:</span>
-                    <span className="text-[#f4f0e8] font-bold">{activeJurisdiction.label}</span>
+                {/* Single Clean Risk Level Pill */}
+                <div className="z-10 mt-3 flex flex-col items-center gap-1.5 w-full">
+                  <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-mono font-extrabold uppercase tracking-wider shadow-lg ${
+                    !file
+                      ? 'border-white/15 bg-white/5 text-[#8c999c]'
+                      : failCount === 0
+                      ? 'border-[#27c93f]/40 bg-[#27c93f]/15 text-[#27c93f] shadow-[#27c93f]/20'
+                      : failCount <= 2
+                      ? 'border-[#f26a3d]/40 bg-[#f26a3d]/15 text-[#f26a3d] shadow-[#f26a3d]/20'
+                      : 'border-[#ff4d4d]/40 bg-[#ff4d4d]/15 text-[#ff4d4d] shadow-[#ff4d4d]/20 animate-bounce'
+                  }`}>
+                    {!file
+                      ? 'READY TO AUDIT'
+                      : failCount === 0
+                      ? '✓ LOW RISK (100% PASSED)'
+                      : failCount <= 2
+                      ? `⚠ MODERATE RISK (${failCount} VIOLATION${failCount !== 1 ? 'S' : ''})`
+                      : `🚨 HIGH RISK (${failCount} CRITICAL VIOLATIONS)`}
                   </div>
-                  <span className="text-[#81b7c2] font-semibold text-[11px]">{analysis.ruleResults.length} Rules Coverage</span>
+
+                  {/* Simple Footer Code Footprint */}
+                  <span className="font-mono text-[11px] text-[#8c999c] mt-2">
+                    {activeJurisdiction.label} • {analysis.ruleResults.length} Statutory Laws Evaluated
+                  </span>
                 </div>
               </div>
 
