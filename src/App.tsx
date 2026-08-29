@@ -1,4 +1,4 @@
-import {
+﻿import {
   ArrowRight,
   Bell,
   Bot,
@@ -126,7 +126,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '1.00 m provided',
       status: 'Fail',
       severity: 'CRITICAL',
-      clause: 'DCR 2026 — Table 4.2 Setback Clearances',
+      clause: 'DCR 2026 â€” Table 4.2 Setback Clearances',
       evidence: 'Site plan callout VIOLATION 1 states Rear Setback Required 4.00 m, Provided 1.00 m (3.00 m deficit). This restricts rear access for service and emergency vehicles.',
       action: 'Increase rear setback by 3.00 m or shift the rear building footprint wall inward.',
       annotation: { x: 14.5, y: 13.0, page: 1, label: 'V1 1.00m' },
@@ -139,7 +139,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '2.00 m provided',
       status: 'Fail',
       severity: 'CRITICAL',
-      clause: 'DCR 2026 — Clause 14.2 Road Frontage Setback',
+      clause: 'DCR 2026 â€” Clause 14.2 Road Frontage Setback',
       evidence: 'Site plan callout VIOLATION 2 states Front Setback Required 6.00 m, Provided 2.00 m from 60 m wide road. 4.00 m shortfall presents high municipal rejection risk.',
       action: 'Increase front setback by 4.00 m or move the building footprint back from the 60 m wide public road.',
       annotation: { x: 14.5, y: 33.5, page: 1, label: 'V2 2.00m' },
@@ -152,7 +152,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '0.90 m provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'NBC 2016 — Part 4 Sec 4.3 (Egress Stairways)',
+      clause: 'NBC 2016 â€” Part 4 Sec 4.3 (Egress Stairways)',
       evidence: 'Typical floor plan callout VIOLATION 3 states Stair Width Required >= 1.20 m, Provided 0.90 m. Restricted width impairs safe occupant egress during emergency evacuation.',
       action: 'Widen the staircase flight by 0.30 m to meet the NBC clear width requirement.',
       annotation: { x: 33.5, y: 16.0, page: 1, label: 'V3 0.90m' },
@@ -165,7 +165,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '1.20 m provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'NBC 2016 — Part 4 Sec 4.2 (Corridor Standards)',
+      clause: 'NBC 2016 â€” Part 4 Sec 4.2 (Corridor Standards)',
       evidence: 'Typical floor plan callout VIOLATION 4 states Corridor Width Required >= 1.50 m, Provided 1.20 m. Corridors serving multi-unit floors require min 1.50 m clear span.',
       action: 'Increase central corridor width by 0.30 m across the residential floor passage.',
       annotation: { x: 35.5, y: 24.5, page: 1, label: 'V4 1.20m' },
@@ -178,7 +178,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '24.70 m provided',
       status: 'Fail',
       severity: 'CRITICAL',
-      clause: 'NBC 2016 & DCR — High-Rise Height Limits',
+      clause: 'NBC 2016 & DCR â€” High-Rise Height Limits',
       evidence: 'Front elevation & section drawing show building height 24.70 m against permissible <= 24.00 m (0.70 m excess height above zoning limit).',
       action: 'Reduce top floor parapet/headroom height by 0.70 m or obtain high-rise planning board approval.',
       annotation: { x: 62.0, y: 28.0, page: 1, label: 'V5 24.70m' },
@@ -191,7 +191,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '25 car parking spaces provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'DCR Parking Regulations — Off-Street Parking Schedule',
+      clause: 'DCR Parking Regulations â€” Off-Street Parking Schedule',
       evidence: 'Parking layout drawing shows 42 cars required based on residential unit count, but only 25 bays provided (17 car parking deficit).',
       action: 'Provide 17 additional parking spaces using puzzle stackers or expanding basement 2 layout.',
       annotation: { x: 32.0, y: 76.0, page: 1, label: 'V6 25 cars' },
@@ -204,10 +204,10 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: 'Left side 3.00 m; Right side 3.00 m',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'DCR 2026 — Table 4.1 Side Margin Schedule',
+      clause: 'DCR 2026 â€” Table 4.1 Side Margin Schedule',
       evidence: 'Site plan labels show SIDE SETBACK 3.00 m provided on both left and right property boundaries, satisfying DCR open space criteria.',
       action: 'Compliant. Both side margins meet the mandatory statutory setback threshold.',
-      annotation: { x: 8.5, y: 23.0, page: 1, label: '✓ PASS 3.0m' },
+      annotation: { x: 8.5, y: 23.0, page: 1, label: 'âœ“ PASS 3.0m' },
     },
     {
       id: 'GH-DCR-PASS-02',
@@ -217,7 +217,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '60.00 m wide road shown',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'DCR Regulation 12.1 — Access Road Standards',
+      clause: 'DCR Regulation 12.1 â€” Access Road Standards',
       evidence: 'Site plan frontage label displays 60.0 m wide public road, significantly exceeding the 6.00 m access minimum for residential multi-family work.',
       action: 'Compliant. Road width is well above the statutory access requirement.',
     },
@@ -229,7 +229,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '2,850.00 sq.m proposed',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'DCR FSI Schedule — Plot FAR Utilization',
+      clause: 'DCR FSI Schedule â€” Plot FAR Utilization',
       evidence: 'Area statement table shows permissible gross area 3,000.00 sq.m, proposed 2,850.00 sq.m (150 sq.m unutilized buffer).',
       action: 'Compliant. Proposed floor space ratio is within permissible statutory limits.',
     },
@@ -241,7 +241,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '100% Match Verified',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'RERA Act 2016 — Section 4(2)(l) Allottee Disclosure',
+      clause: 'RERA Act 2016 â€” Section 4(2)(l) Allottee Disclosure',
       evidence: 'Unit carpet area schedule matches the architectural floor plans within 1.4% tolerance, meeting mandatory RERA homebuyer disclosure standards.',
       action: 'Compliant. Ready for statutory homebuyer agreement disclosure.',
     },
@@ -604,7 +604,7 @@ function App() {
                   onClick={() => handleNavigate('landing')}
                   className="btn-secondary text-xs hover:border-[#f26a3d] hover:text-[#f26a3d]"
                 >
-                  <span>← Home</span>
+                  <span>â† Home</span>
                 </button>
 
               <button
@@ -629,9 +629,9 @@ function App() {
             </div>
           </header>
 
-          {/* Main Workspace — Fixed height, two independent scroll panels */}
+          {/* Main Workspace â€” Fixed height, two independent scroll panels */}
           <main className="flex flex-1 overflow-hidden flex-col lg:flex-row">
-            {/* Left Panel — scrollable independently */}
+            {/* Left Panel â€” scrollable independently */}
             <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 overflow-y-auto">
               {/* Subheader & Kicker */}
               <div className="flex flex-col gap-0.5">
@@ -842,7 +842,7 @@ function App() {
               </div>
             </section>
 
-            {/* Right Panel — scrollable independently */}
+            {/* Right Panel â€” scrollable independently */}
             <aside className="w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
               {/* AGENT REASONING Panel */}
               <div className="card-prudence p-4 flex flex-col gap-3">
@@ -851,7 +851,7 @@ function App() {
                     AGENT REASONING & COMPLIANCE SCAN
                   </span>
                   <span className="font-mono text-[9px] font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2 py-0.5 rounded">
-                    • {file ? 'ANALYSIS COMPLETE' : 'AWAITING UPLOAD'}
+                    â€¢ {file ? 'ANALYSIS COMPLETE' : 'AWAITING UPLOAD'}
                   </span>
                 </div>
 
@@ -897,14 +897,14 @@ function App() {
                       onClick={() => setRuleFilter('PASS')}
                       className={`px-2.5 py-1 rounded transition ${ruleFilter === 'PASS' ? 'bg-[#27c93f] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#27c93f]'}`}
                     >
-                      ✓ Pass ({passCount})
+                      âœ“ Pass ({passCount})
                     </button>
                     <button
                       type="button"
                       onClick={() => setRuleFilter('FAIL')}
                       className={`px-2.5 py-1 rounded transition ${ruleFilter === 'FAIL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f26a3d]'}`}
                     >
-                      ✗ Fail ({failCount})
+                      âœ— Fail ({failCount})
                     </button>
                   </div>
                 </div>
@@ -931,7 +931,7 @@ function App() {
                           {/* Card Top Row */}
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <span className="badge-code font-mono text-[10px] px-2 py-0.5 rounded bg-white/10 text-[#f4f0e8] font-bold">
-                              {rule.pack} · {rule.id}
+                              {rule.pack} Â· {rule.id}
                             </span>
 
                             {isPass ? (
@@ -952,7 +952,7 @@ function App() {
 
                           {/* Requirement vs Provided Summary */}
                           <p className="font-mono text-xs text-[#8c999c] mt-1">
-                            Required: <span className="text-[#f4f0e8] font-semibold">{rule.required}</span> · Provided: <span className="text-[#f4f0e8] font-semibold">{rule.current}</span>
+                            Required: <span className="text-[#f4f0e8] font-semibold">{rule.required}</span> Â· Provided: <span className="text-[#f4f0e8] font-semibold">{rule.current}</span>
                           </p>
 
                           {/* EXPANDED DETAILS INSIDE CARD WHEN SELECTED */}
@@ -975,7 +975,7 @@ function App() {
                                 </div>
                                 <div className={`flex justify-between border-t border-white/10 pt-1.5 ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
                                   <span>Compliance Status:</span>
-                                  <span className="font-bold">{isPass ? '✓ Fully Compliant' : '✗ Statutory Non-Compliance Deficit'}</span>
+                                  <span className="font-bold">{isPass ? 'âœ“ Fully Compliant' : 'âœ— Statutory Non-Compliance Deficit'}</span>
                                 </div>
                               </div>
 
@@ -1020,7 +1020,7 @@ function App() {
                                   className="btn-orange text-xs h-8 flex-1"
                                 >
                                   <Sparkles size={13} />
-                                  <span>Consult PRUDENCE AI ↗</span>
+                                  <span>Consult PRUDENCE AI â†—</span>
                                 </button>
                               </div>
                             </div>
@@ -1163,7 +1163,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
         {/* Simple, Attractive Sentence Subtitle */}
         <p className="mt-6 font-sans text-base sm:text-lg text-[#8c999c] max-w-2xl leading-relaxed relative z-10 backdrop-blur-xs">
-          Upload 2D blueprints or 3D CAD models — spot setback deficits, FSI breaches, and NBC fire safety risks before a single brick is laid.
+          Upload 2D blueprints or 3D CAD models â€” spot setback deficits, FSI breaches, and NBC fire safety risks before a single brick is laid.
         </p>
 
         {/* High-Tech Crazy Aesthetic Primary CTA */}
@@ -1276,10 +1276,10 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
                 <p className="font-mono text-xs text-[#81b7c2] mt-1">
                   {activeTab === 'v1'
-                    ? 'BBMP Bylaws 2026 — Clause 14.2 (Table 4.1)'
+                    ? 'BBMP Bylaws 2026 â€” Clause 14.2 (Table 4.1)'
                     : activeTab === 'v2'
-                    ? 'National Building Code 2016 — Part 4 Sec 3.2'
-                    : 'Development Control Rules — Open Plot Ratio'}
+                    ? 'National Building Code 2016 â€” Part 4 Sec 3.2'
+                    : 'Development Control Rules â€” Open Plot Ratio'}
                 </p>
 
                 {/* Audit Metrics Table */}
@@ -1322,7 +1322,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
                 {/* Status indicator */}
                 <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between font-mono text-[10px] text-[#8c999c]">
                   <span>MODE: DEMO PREVIEW</span>
-                  <span className="text-[#27c93f] font-bold">✓ PARSER READY</span>
+                  <span className="text-[#27c93f] font-bold">âœ“ PARSER READY</span>
                 </div>
               </div>
             </div>
@@ -1341,7 +1341,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
       {/* Sleek Minimal Footer */}
       <footer className="border-t border-white/10 py-8 text-center font-mono text-xs text-[#8c999c] relative z-10">
-        PRUDENCE AI — Architectural Code Compliance Intelligence Engine
+        PRUDENCE AI â€” Architectural Code Compliance Intelligence Engine
       </footer>
     </div>
   );
@@ -1412,8 +1412,8 @@ function FormattedMarkdownText({ content }: { content: string }) {
       }
 
       // Detect List Line
-      if (/^\s*[\-\*•\d+\.]\s+/.test(line)) {
-        currentListItems.push(line.replace(/^\s*[\-\*•\d+\.]\s+/, ''));
+      if (/^\s*[\-\*â€¢\d+\.]\s+/.test(line)) {
+        currentListItems.push(line.replace(/^\s*[\-\*â€¢\d+\.]\s+/, ''));
         continue;
       } else {
         flushList();
@@ -1467,7 +1467,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
 
   const parseWorkflowSteps = (text: string) => {
     const stepBlocks = text
-      .split(/(?=\[\s*Step\s*\d+|Step\s*\d+|\d+️⃣)/i)
+      .split(/(?=\[\s*Step\s*\d+|Step\s*\d+|\d+ï¸âƒ£)/i)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
@@ -1476,12 +1476,12 @@ function FormattedMarkdownText({ content }: { content: string }) {
     return stepBlocks.map((block, idx) => {
       const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
       const firstLine = lines[0] || '';
-      const titleMatch = firstLine.match(/\[?\s*(?:Step\s*\d+|^\d+️⃣)?\s*:?\s*([^\]]+)\]?/i);
+      const titleMatch = firstLine.match(/\[?\s*(?:Step\s*\d+|^\d+ï¸âƒ£)?\s*:?\s*([^\]]+)\]?/i);
       const title = titleMatch ? titleMatch[1].trim() : firstLine.replace(/^[^a-zA-Z0-9]+/, '');
       const description = lines
         .slice(1)
         .join(' ')
-        .replace(/^[➔\->=]+\s*/, '')
+        .replace(/^[âž”\->=]+\s*/, '')
         .trim();
 
       return {
@@ -1504,7 +1504,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
             lang === 'workflow' ||
             code.includes('-->') ||
             code.includes('->') ||
-            code.includes('➔') ||
+            code.includes('âž”') ||
             code.includes('[ Step');
           const steps = isWorkflow ? parseWorkflowSteps(code) : null;
 
@@ -1514,7 +1514,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
                 <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
                   <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping" />
-                    ⚡ VISUAL WORKFLOW & PROCESS DIAGRAM
+                    âš¡ VISUAL WORKFLOW & PROCESS DIAGRAM
                   </span>
                   <span className="text-[#8c999c] font-mono">{steps.length} STAGES</span>
                 </div>
@@ -1527,7 +1527,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
                     >
                       <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#f26a3d]">
                         <span>STEP {step.stepNum}</span>
-                        <span className="text-[#81b7c2] group-hover:translate-x-1 transition-transform">➔</span>
+                        <span className="text-[#81b7c2] group-hover:translate-x-1 transition-transform">âž”</span>
                       </div>
                       <div className="font-space text-xs font-bold text-[#f4f0e8] leading-tight">
                         {renderInlineFormatting(step.title)}
@@ -1547,7 +1547,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
           return (
             <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
               <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
-                <span>{isWorkflow ? '⚡ WORKFLOW & PROCESS DIAGRAM' : `SPECIFICATION / ${lang.toUpperCase() || 'CODE'}`}</span>
+                <span>{isWorkflow ? 'âš¡ WORKFLOW & PROCESS DIAGRAM' : `SPECIFICATION / ${lang.toUpperCase() || 'CODE'}`}</span>
                 <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
               </div>
               <pre className="whitespace-pre overflow-x-auto leading-relaxed">{code}</pre>
@@ -1660,79 +1660,147 @@ function AIChatDrawer({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
-      <div className="flex h-full w-full max-w-lg sm:max-w-xl flex-col border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex justify-end"
+      style={{ background: 'rgba(4,5,6,0.72)', backdropFilter: 'blur(6px)' }}
+    >
+      <div
+        className="flex h-full w-full max-w-[520px] flex-col"
+        style={{
+          background: '#0b0d0f',
+          borderLeft: '1px solid rgba(242,106,61,0.22)',
+          boxShadow: '-4px 0 60px rgba(242,106,61,0.10), 0 0 0 1px rgba(255,255,255,0.04)',
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-5 py-4 bg-[#111416]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded border border-[#f26a3d]/30 bg-[#f26a3d]/10 text-[#f26a3d]">
-              <Bot size={18} />
+        <div
+          style={{
+            background: 'linear-gradient(90deg, #111416 0%, #0e1012 100%)',
+            borderBottom: '1px solid rgba(242,106,61,0.18)',
+            padding: '14px 20px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)',
+          }} />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div style={{
+                width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid rgba(242,106,61,0.4)',
+                background: 'rgba(242,106,61,0.08)',
+                boxShadow: '0 0 14px rgba(242,106,61,0.18)',
+                borderRadius: 4,
+              }}>
+                <Bot size={17} color="#f26a3d" />
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700, color: '#f4f0e8', letterSpacing: '-0.01em' }}>
+                  PRUDENCE AI
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: '#81b7c2', display: 'flex', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#81b7c2', display: 'inline-block', animation: 'pulse 2s infinite' }} />
+                  GROUNDED Â· ACTIVE BLUEPRINT
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 className="font-space text-sm font-semibold text-[#f4f0e8]">PRUDENCE AI Assistant</h3>
-              <p className="flex items-center gap-1.5 font-mono text-[10px] text-[#81b7c2]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#81b7c2] animate-pulse" />
-                Grounded in active blueprint
-              </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onClear}
+                title="Clear session"
+                style={{
+                  background: 'none', border: '1px solid transparent', borderRadius: 4,
+                  padding: '5px 7px', cursor: 'pointer', color: '#4e5c60', transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#8c999c'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#4e5c60'; }}
+              >
+                <Trash2 size={14} />
+              </button>
+              <button
+                onClick={onClose}
+                title="Close"
+                style={{
+                  background: 'none', border: '1px solid transparent', borderRadius: 4,
+                  padding: '5px 7px', cursor: 'pointer', color: '#4e5c60', transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#f4f0e8'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#4e5c60'; }}
+              >
+                <X size={16} />
+              </button>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onClear}
-              className="rounded p-1.5 text-[#8c999c] hover:bg-[#151a1c] hover:text-[#f4f0e8]"
-              title="Clear chat"
-            >
-              <Trash2 size={16} />
-            </button>
-            <button
-              onClick={onClose}
-              className="rounded p-1.5 text-[#8c999c] hover:bg-[#151a1c] hover:text-[#f4f0e8]"
-              title="Close chat"
-            >
-              <X size={18} />
-            </button>
           </div>
         </div>
 
-        {/* Messages Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-3 font-sans text-xs">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto" style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}
             >
-              {msg.role === 'assistant' && (
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[#f26a3d]/30 bg-[#f26a3d]/10 text-[#f26a3d]">
-                  <Bot size={13} />
-                </div>
-              )}
-
+              <div style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 9, letterSpacing: '0.1em',
+                color: msg.role === 'user' ? '#f26a3d' : '#4e5c60',
+                marginBottom: 4,
+                textTransform: 'uppercase',
+              }}>
+                {msg.role === 'user' ? 'â€” you' : 'â€” prudence'}
+              </div>
               <div
-                className={`max-w-[90%] rounded p-3 leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-[#f26a3d] text-[#08090a] font-medium font-sans'
-                    : 'border border-[rgba(255,255,255,0.08)] bg-[#111416] text-[#f4f0e8]'
-                }`}
+                style={{
+                  maxWidth: '88%',
+                  padding: msg.role === 'user' ? '9px 13px' : '11px 14px',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  lineHeight: 1.65,
+                  fontFamily: msg.role === 'user' ? "'DM Sans', sans-serif" : 'inherit',
+                  fontWeight: msg.role === 'user' ? 500 : 400,
+                  ...(msg.role === 'user'
+                    ? {
+                        background: 'rgba(242,106,61,0.10)',
+                        border: '1px solid rgba(242,106,61,0.32)',
+                        color: '#f4f0e8',
+                        boxShadow: '0 0 18px rgba(242,106,61,0.06)',
+                      }
+                    : {
+                        background: '#111416',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        borderLeft: '2px solid rgba(129,183,194,0.5)',
+                        color: '#d8d4cc',
+                        boxShadow: '0 2px 18px rgba(0,0,0,0.3)',
+                      }),
+                }}
               >
                 {msg.role === 'user' ? (
-                  <div className="whitespace-pre-wrap font-medium">{msg.content}</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                 ) : (
                   <FormattedMarkdownText content={msg.content} />
                 )}
               </div>
-
-              {msg.role === 'user' && (
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[rgba(255,255,255,0.08)] bg-[#151a1c] text-[#f4f0e8]">
-                  <User size={13} />
-                </div>
-              )}
             </div>
           ))}
 
           {isSending && (
-            <div className="flex items-center gap-2 text-[#8c999c] text-xs font-mono">
-              <Loader2 className="animate-spin text-[#f26a3d]" size={14} />
-              <span>PRUDENCE AI is analyzing blueprint rules...</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                display: 'flex', gap: 8, alignItems: 'center',
+                background: '#111416',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderLeft: '2px solid rgba(129,183,194,0.5)',
+                padding: '9px 14px',
+                borderRadius: 4,
+              }}>
+                <Loader2 size={12} color="#f26a3d" style={{ animation: 'spin 1s linear infinite' }} />
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: '#4e5c60', letterSpacing: '0.06em' }}>
+                  analyzing blueprint context...
+                </span>
+              </div>
             </div>
           )}
 
@@ -1740,35 +1808,105 @@ function AIChatDrawer({
         </div>
 
         {/* Suggestions */}
-        <div className="flex gap-2 overflow-x-auto px-5 py-2 border-t border-[rgba(255,255,255,0.08)]">
+        <div style={{
+          display: 'flex', gap: 6, overflowX: 'auto', padding: '10px 18px',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          scrollbarWidth: 'none',
+        }}>
           {suggestions.map((s) => (
             <button
               key={s}
               onClick={() => onSend(s)}
-              className="shrink-0 rounded border border-[rgba(255,255,255,0.08)] bg-[#111416] px-2.5 py-1 font-mono text-[10px] text-[#8c999c] hover:border-[#f26a3d] hover:text-[#f26a3d] transition"
+              style={{
+                flexShrink: 0,
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 10,
+                color: '#4e5c60',
+                background: 'none',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 3,
+                padding: '5px 10px',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(242,106,61,0.4)';
+                (e.currentTarget as HTMLButtonElement).style.color = '#f26a3d';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.07)';
+                (e.currentTarget as HTMLButtonElement).style.color = '#4e5c60';
+              }}
             >
               {s}
             </button>
           ))}
         </div>
 
-        {/* Input Form */}
-        <form onSubmit={handleSubmit} className="border-t border-[rgba(255,255,255,0.08)] p-3 bg-[#111416]">
-          <div className="relative flex items-center">
+        {/* Input */}
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            padding: '12px 18px 16px',
+            borderTop: '1px solid rgba(242,106,61,0.15)',
+            background: '#0e1012',
+          }}
+        >
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{
+              position: 'absolute', left: 12,
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 11, color: '#f26a3d', pointerEvents: 'none', userSelect: 'none',
+            }}>
+              &gt;
+            </span>
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Ask PRUDENCE about setback, FSI, NBC rules..."
-              className="w-full rounded border border-[rgba(255,255,255,0.08)] bg-[#08090a] py-2.5 pl-3 pr-10 text-xs text-[#f4f0e8] placeholder-[#8c999c] focus:border-[#f26a3d] focus:outline-none font-sans"
+              placeholder="ask about setback, FSI, NBC clause..."
+              style={{
+                width: '100%',
+                background: '#08090a',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 4,
+                padding: '10px 42px 10px 26px',
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 11,
+                color: '#f4f0e8',
+                outline: 'none',
+                transition: 'border-color 0.15s',
+                caretColor: '#f26a3d',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(242,106,61,0.45)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
             />
             <button
               type="submit"
               disabled={!inputText.trim() || isSending}
-              className="absolute right-1.5 flex h-7 w-7 items-center justify-center rounded bg-[#f26a3d] text-[#08090a] hover:bg-[#f47d55] disabled:opacity-30 transition"
+              style={{
+                position: 'absolute', right: 6,
+                width: 30, height: 30,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: inputText.trim() && !isSending ? '#f26a3d' : 'rgba(242,106,61,0.12)',
+                border: '1px solid rgba(242,106,61,0.3)',
+                borderRadius: 3,
+                cursor: inputText.trim() && !isSending ? 'pointer' : 'default',
+                transition: 'all 0.15s',
+              }}
             >
-              <Send size={13} />
+              <Send size={12} color={inputText.trim() && !isSending ? '#08090a' : '#f26a3d'} />
             </button>
+          </div>
+          <div style={{
+            marginTop: 7,
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 9,
+            color: '#2e3a3d',
+            letterSpacing: '0.06em',
+          }}>
+            PRUDENCE Â· GEMINI 2.5 PRO Â· RERA / NBC / DCR GROUNDED
           </div>
         </form>
       </div>
@@ -1883,7 +2021,7 @@ function DrawingPreview({
                           : 'border-[#81b7c2] text-[#f4f0e8]'
                       }`}
                     >
-                      {isPass ? '✓' : rule.id.split('-').pop()}
+                      {isPass ? 'âœ“' : rule.id.split('-').pop()}
                     </div>
 
                     {/* Leader Line Callout Tag */}
@@ -1960,7 +2098,7 @@ function DrawingPreview({
                         : 'border-[#81b7c2] text-[#f4f0e8]'
                     }`}
                   >
-                    {isPass ? '✓' : rule.id.split('-').pop()}
+                    {isPass ? 'âœ“' : rule.id.split('-').pop()}
                   </div>
 
                   <div
