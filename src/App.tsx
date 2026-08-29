@@ -301,6 +301,15 @@ function App() {
     }, 180);
   };
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('theme-light');
+      document.body.classList.add('theme-light');
+    } else {
+      document.documentElement.classList.remove('theme-light');
+      document.body.classList.remove('theme-light');
+    }
+  }, [theme]);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [analysis, setAnalysis] = useState<Analysis>(emptyAnalysis);

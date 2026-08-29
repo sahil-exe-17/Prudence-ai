@@ -660,29 +660,16 @@
   animation: glowPulseBorder 4s ease-in-out infinite;
 }
 
-
 /* ==========================================================================
    AESTHETIC ARCHITECTURAL LIGHT THEME OVERRIDES (.theme-light)
    ========================================================================== */
-.theme-light {
-  --bg-base: #f9f8f5;
-  --bg-card: #ffffff;
-  --bg-surface: #f0eee8;
-  --accent-orange: #e05326;
-  --accent-blue: #247385;
-  --accent-purple: #6a53cb;
-  --text-primary: #15181a;
-  --text-muted: #5e6f75;
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-hover: rgba(0, 0, 0, 0.18);
-  color-scheme: light;
-}
-
 .theme-light,
 .theme-light body,
-.theme-light #root {
+.theme-light #root,
+.theme-light html {
   background-color: #f9f8f5 !important;
   color: #15181a !important;
+  color-scheme: light;
 }
 
 .theme-light .bg-ambient-mesh {
@@ -695,12 +682,99 @@
     linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px) !important;
 }
 
-.theme-light .card-prudence {
+/* Background surfaces */
+.theme-light header,
+.theme-light aside,
+.theme-light nav {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.theme-light .card-prudence,
+.theme-light div[class*="bg-[#111416]"],
+.theme-light div[class*="bg-[#08090a]"],
+.theme-light div[class*="bg-[#0e1012]"] {
   background-color: #ffffff !important;
   border-color: rgba(0, 0, 0, 0.08) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
 }
 
+.theme-light div[class*="bg-[#151a1c]"] {
+  background-color: #f0eee8 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Text Colors */
+.theme-light h1, .theme-light h2, .theme-light h3, .theme-light h4, .theme-light span, .theme-light p {
+  color: inherit;
+}
+
+.theme-light div[class*="text-[#f4f0e8]"],
+.theme-light span[class*="text-[#f4f0e8]"],
+.theme-light p[class*="text-[#f4f0e8]"] {
+  color: #15181a !important;
+}
+
+.theme-light div[class*="text-[#8c999c]"],
+.theme-light span[class*="text-[#8c999c]"],
+.theme-light p[class*="text-[#8c999c]"] {
+  color: #5a6b72 !important;
+}
+
+.theme-light div[class*="text-[#81b7c2]"],
+.theme-light span[class*="text-[#81b7c2]"] {
+  color: #247385 !important;
+}
+
+/* CAD Canvas Surface */
+.theme-light .cad-grid-bg {
+  background-color: #f3f2ed !important;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px) !important;
+}
+
+/* Inputs & Controls */
+.theme-light input,
+.theme-light select,
+.theme-light textarea {
+  background-color: #ffffff !important;
+  color: #15181a !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #8c999c !important;
+}
+
+/* Secondary Buttons */
+.theme-light .btn-secondary {
+  background-color: #ffffff !important;
+  color: #15181a !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.theme-light .btn-secondary:hover {
+  background-color: #f0eee8 !important;
+  border-color: #f26a3d !important;
+  color: #e05326 !important;
+}
+
+/* Pack Pills */
+.theme-light .pack-pill {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #5a6b72 !important;
+}
+
+.theme-light .pack-pill.is-active {
+  background-color: rgba(224, 83, 38, 0.08) !important;
+  border-color: #e05326 !important;
+  color: #e05326 !important;
+}
+
+/* Custom Scrollbars */
 .theme-light ::-webkit-scrollbar-track {
   background: #f9f8f5 !important;
 }
