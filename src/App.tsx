@@ -552,7 +552,7 @@ function App() {
   const totalPages = analysis.totalPages || 1;
 
   return (
-    <div className="min-h-screen bg-[#08090a] text-[#f4f0e8] flex flex-col font-sans">
+    <div className="h-full bg-[#08090a] text-[#f4f0e8] flex flex-col font-sans">
       <input
         ref={inputRef}
         className="hidden"
@@ -561,14 +561,14 @@ function App() {
         onChange={onInputChange}
       />
 
-      <div className={`flex flex-col flex-1 ${isNavigating ? 'view-transition-exit' : 'view-transition-enter'}`}>
+      <div className={`flex flex-col h-full ${isNavigating ? 'view-transition-exit' : 'view-transition-enter'}`}>
         {view === 'landing' ? (
           <LandingPage
             onLaunch={() => handleNavigate('workspace')}
             onUpload={() => inputRef.current?.click()}
           />
         ) : (
-          <>
+          <div className="flex flex-col h-full">
             {/* Top Header Bar inside Workspace */}
             <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#08090a]/90 px-6 backdrop-blur-md">
               {/* Brand */}
@@ -629,10 +629,10 @@ function App() {
             </div>
           </header>
 
-          {/* Main Workspace (Independent Scrollable Dual Panels) */}
-          <main className="flex flex-1 flex-col lg:flex-row min-h-[calc(100vh-56px)] lg:h-[calc(100vh-56px)] lg:max-h-[calc(100vh-56px)] overflow-y-auto lg:overflow-hidden w-full">
-            {/* Left Section: Main Analysis & Canvas (Scrollable Panel) */}
-            <section className="w-full lg:flex-1 flex flex-col gap-3 p-4 min-w-0 h-auto lg:h-full lg:max-h-full overflow-y-auto shrink">
+          {/* Main Workspace — Fixed height, two independent scroll panels */}
+          <main className="flex flex-1 overflow-hidden flex-col lg:flex-row">
+            {/* Left Panel — scrollable independently */}
+            <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 overflow-y-auto">
               {/* Subheader & Kicker */}
               <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#f26a3d]">
@@ -842,8 +842,8 @@ function App() {
               </div>
             </section>
 
-            {/* Right Section: STATUTORY REGULATION AUDIT CENTER (Independent Scrollable Sidebar) */}
-            <aside className="w-full lg:w-[440px] xl:w-[480px] h-auto lg:h-full lg:max-h-full shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
+            {/* Right Panel — scrollable independently */}
+            <aside className="w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
               {/* AGENT REASONING Panel */}
               <div className="card-prudence p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -1099,8 +1099,8 @@ function App() {
               ])
             }
           />
-        </>
-      )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1111,7 +1111,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
   const [activeTab, setActiveTab] = useState<'v1' | 'v2' | 'v3'>('v1');
 
   return (
-    <div className="relative min-h-screen bg-ambient-mesh text-[#f4f0e8] flex flex-col font-sans overflow-x-hidden">
+    <div className="relative h-full bg-ambient-mesh text-[#f4f0e8] flex flex-col font-sans overflow-x-hidden overflow-y-auto">
       {/* Sleek Vercel Header Navbar */}
       <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-white/10 bg-[#08090a]/90 px-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
