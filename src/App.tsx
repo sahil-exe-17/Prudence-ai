@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowRight,
   Bell,
   Bot,
@@ -207,7 +207,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       clause: 'DCR 2026 â€” Table 4.1 Side Margin Schedule',
       evidence: 'Site plan labels show SIDE SETBACK 3.00 m provided on both left and right property boundaries, satisfying DCR open space criteria.',
       action: 'Compliant. Both side margins meet the mandatory statutory setback threshold.',
-      annotation: { x: 8.5, y: 23.0, page: 1, label: 'âœ“ PASS 3.0m' },
+      annotation: { x: 8.5, y: 23.0, page: 1, label: ' PASS 3.0m' },
     },
     {
       id: 'GH-DCR-PASS-02',
@@ -897,14 +897,14 @@ function App() {
                       onClick={() => setRuleFilter('PASS')}
                       className={`px-2.5 py-1 rounded transition ${ruleFilter === 'PASS' ? 'bg-[#27c93f] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#27c93f]'}`}
                     >
-                      âœ“ Pass ({passCount})
+                       Pass ({passCount})
                     </button>
                     <button
                       type="button"
                       onClick={() => setRuleFilter('FAIL')}
                       className={`px-2.5 py-1 rounded transition ${ruleFilter === 'FAIL' ? 'bg-[#f26a3d] text-[#08090a] font-bold' : 'text-[#8c999c] hover:text-[#f26a3d]'}`}
                     >
-                      âœ— Fail ({failCount})
+                       Fail ({failCount})
                     </button>
                   </div>
                 </div>
@@ -975,7 +975,7 @@ function App() {
                                 </div>
                                 <div className={`flex justify-between border-t border-white/10 pt-1.5 ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
                                   <span>Compliance Status:</span>
-                                  <span className="font-bold">{isPass ? 'âœ“ Fully Compliant' : 'âœ— Statutory Non-Compliance Deficit'}</span>
+                                  <span className="font-bold">{isPass ? ' Fully Compliant' : ' Statutory Non-Compliance Deficit'}</span>
                                 </div>
                               </div>
 
@@ -1322,7 +1322,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
                 {/* Status indicator */}
                 <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between font-mono text-[10px] text-[#8c999c]">
                   <span>MODE: DEMO PREVIEW</span>
-                  <span className="text-[#27c93f] font-bold">âœ“ PARSER READY</span>
+                  <span className="text-[#27c93f] font-bold"> PARSER READY</span>
                 </div>
               </div>
             </div>
@@ -2021,7 +2021,7 @@ function DrawingPreview({
                           : 'border-[#81b7c2] text-[#f4f0e8]'
                       }`}
                     >
-                      {isPass ? 'âœ“' : rule.id.split('-').pop()}
+                      {isPass ? '' : rule.id.split('-').pop()}
                     </div>
 
                     {/* Leader Line Callout Tag */}
@@ -2098,7 +2098,7 @@ function DrawingPreview({
                         : 'border-[#81b7c2] text-[#f4f0e8]'
                     }`}
                   >
-                    {isPass ? 'âœ“' : rule.id.split('-').pop()}
+                    {isPass ? '' : rule.id.split('-').pop()}
                   </div>
 
                   <div
