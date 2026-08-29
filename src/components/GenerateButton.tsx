@@ -270,7 +270,9 @@ export function GenerateButton({
         onBlur={() => setIsFocused(false)}
         onClick={(e) => {
           setIsFocused(true);
-          onClick?.(e);
+          if (typeof onClick === 'function') {
+            onClick(e);
+          }
         }}
         {...props}
       >

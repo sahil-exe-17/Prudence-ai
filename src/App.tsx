@@ -593,8 +593,13 @@ function App() {
       <div className={`flex flex-col h-full ${isNavigating ? 'view-transition-exit' : 'view-transition-enter'}`}>
         {view === 'landing' ? (
           <LandingPage
+            theme={theme}
+            setTheme={setTheme}
             onLaunch={() => handleNavigate('workspace')}
-            onUpload={() => inputRef.current?.click()}
+            onUpload={() => {
+              handleNavigate('workspace');
+              setTimeout(() => inputRef.current?.click(), 120);
+            }}
           />
         ) : (
           <div className="flex flex-col h-full animate-page-enter">
