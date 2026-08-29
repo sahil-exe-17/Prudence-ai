@@ -306,6 +306,8 @@ function App() {
   const [selectedRuleId, setSelectedRuleId] = useState<string>('GH-DCR-01');
   const [ruleFilter, setRuleFilter] = useState<'ALL' | 'PASS' | 'FAIL'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+  const recommendedSearchTerms = ['Setback', 'FAR', 'Egress', 'Parking', 'RERA', 'Critical'];
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
