@@ -276,7 +276,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
     status: score >= 70 ? 'Review Passed' : 'Conditional Approval',
     ruleResults,
     violations,
-    totalPages: 3,
+    totalPages: 1,
   };
 }
 
@@ -549,7 +549,7 @@ function App() {
   };
 
   const canAnalyze = Boolean(file);
-  const totalPages = analysis.totalPages || 3;
+  const totalPages = analysis.totalPages || 1;
 
   return (
     <div className="min-h-screen bg-[#08090a] text-[#f4f0e8] flex flex-col font-sans">
@@ -729,7 +729,7 @@ function App() {
                     </span>
 
                     {/* Sheet Page Switcher */}
-                    {file && !is3D && (
+                    {file && !is3D && totalPages > 1 && (
                       <div className="flex items-center gap-1.5 bg-[#08090a] px-2 py-0.5 rounded border border-white/10 font-mono text-xs">
                         <button
                           type="button"
@@ -750,6 +750,11 @@ function App() {
                         >
                           <ChevronRight size={14} />
                         </button>
+                      </div>
+                    )}
+                    {file && !is3D && totalPages <= 1 && (
+                      <div className="flex items-center gap-1.5 bg-[#08090a] px-2.5 py-0.5 rounded border border-white/10 font-mono text-xs text-[#8c999c]">
+                        <span className="text-[#f4f0e8] font-semibold">Sheet 1 of 1</span>
                       </div>
                     )}
                   </div>
