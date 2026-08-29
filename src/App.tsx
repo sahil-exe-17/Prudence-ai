@@ -878,36 +878,72 @@ function App() {
 
             {/* Right Panel - scrollable independently */}
             <aside className="w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
-              {/* AGENT REASONING Panel */}
-              <div className="card-prudence p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
-                    AGENT REASONING & COMPLIANCE SCAN
+              {/* GOATED STATUTORY COMPLIANCE RADAR & SCORE CARD */}
+              <div className="card-prudence p-4 flex flex-col gap-4 relative overflow-hidden group hover:border-[#f26a3d]/60 transition-all duration-500 shadow-2xl">
+                {/* Ambient Background Glow Mesh */}
+                <div className="absolute -right-8 -top-8 w-32 h-32 bg-[#f26a3d]/10 rounded-full blur-2xl group-hover:bg-[#f26a3d]/20 transition-all duration-500 pointer-events-none" />
+
+                {/* Header Title */}
+                <div className="flex items-center justify-between z-10">
+                  <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider flex items-center gap-1.5">
+                    <Shield size={13} className="text-[#f26a3d]" />
+                    STATUTORY COMPLIANCE RADAR
                   </span>
-                  <span className="font-mono text-[9px] font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2 py-0.5 rounded">
-                    • {file ? 'ANALYSIS COMPLETE' : 'AWAITING UPLOAD'}
+                  <span className="font-mono text-[9px] font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#27c93f] animate-ping" />
+                    {file ? 'SCAN COMPLETE' : 'AWAITING UPLOAD'}
                   </span>
                 </div>
 
-                <ul className="flex flex-col gap-2.5 font-mono text-xs text-[#8c999c] pt-1">
-                  <li className={`flex items-center gap-2 ${file ? 'text-[#f4f0e8]' : 'opacity-40'}`}>
-                    <span>01</span>
-                    <CheckCircle2 size={13} className={file ? "text-[#27c93f]" : "text-[#8c999c]"} />
-                    <span>Extracting sheet vector & dimensions</span>
-                  </li>
-                  <li className={`flex items-center gap-2 ${file ? 'text-[#f4f0e8]' : 'opacity-40'}`}>
-                    <span>02</span>
-                    <CheckCircle2 size={13} className={file ? "text-[#27c93f]" : "text-[#8c999c]"} />
-                    <span>Evaluated {analysis.ruleResults.length} DCR, NBC 2016 & RERA rules</span>
-                  </li>
-                  <li className={`flex items-center gap-2 ${file ? 'text-[#f26a3d]' : 'opacity-40'}`}>
-                    <span>03</span>
-                    <Sparkles size={13} className={file ? "text-[#f26a3d]" : "text-[#8c999c]"} />
-                    <span className={file ? "font-semibold text-[#f26a3d]" : ""}>
-                      Found {failCount} Violation{failCount !== 1 ? 's' : ''} & {passCount} Correct Rule{passCount !== 1 ? 's' : ''}
+                {/* Main Score & Risk Grid */}
+                <div className="grid grid-cols-2 gap-3 z-10">
+                  {/* Compliance Score Tile */}
+                  <div className="flex flex-col p-3 rounded-xl border border-white/10 bg-[#111416] hover:border-[#f26a3d]/50 transition-all duration-300 shadow-md">
+                    <span className="font-mono text-[9px] font-semibold text-[#8c999c] uppercase">COMPLIANCE SCORE</span>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="font-space text-3xl font-extrabold text-[#f4f0e8] tracking-tight">
+                        {file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%
+                      </span>
+                      <span className="font-mono text-[10px] text-[#27c93f] font-bold">ACCURACY</span>
+                    </div>
+                    {/* Animated Glowing Progress Bar */}
+                    <div className="w-full h-1.5 bg-white/10 rounded-full mt-2.5 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#f26a3d] to-[#27c93f] transition-all duration-1000 ease-out shadow-[0_0_10px_#f26a3d]"
+                        style={{ width: `${file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Risk Level Tile */}
+                  <div className="flex flex-col p-3 rounded-xl border border-white/10 bg-[#111416] hover:border-[#f26a3d]/50 transition-all duration-300 shadow-md">
+                    <span className="font-mono text-[9px] font-semibold text-[#8c999c] uppercase">RISK ASSESSMENT</span>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span className={`font-space text-xs sm:text-sm font-extrabold px-2.5 py-1 rounded-md border uppercase tracking-wider ${
+                        !file || failCount === 0
+                          ? 'bg-[#27c93f]/15 border-[#27c93f]/40 text-[#27c93f]'
+                          : failCount <= 2
+                          ? 'bg-[#f26a3d]/15 border-[#f26a3d]/40 text-[#f26a3d]'
+                          : 'bg-[#ff4d4d]/15 border-[#ff4d4d]/40 text-[#ff4d4d]'
+                      }`}>
+                        {!file ? 'NONE' : failCount === 0 ? 'LOW RISK' : failCount <= 2 ? 'MODERATE' : 'HIGH RISK'}
+                      </span>
+                    </div>
+                    <span className="font-mono text-[10px] text-[#8c999c] mt-2">
+                      {file ? `${failCount} Violation${failCount !== 1 ? 's' : ''} detected` : 'Upload drawing to scan'}
                     </span>
-                  </li>
-                </ul>
+                  </div>
+                </div>
+
+                {/* Active Code Coverage Bar */}
+                <div className="flex items-center justify-between p-2.5 rounded-lg border border-white/5 bg-[#151a1c] font-mono text-xs z-10">
+                  <div className="flex items-center gap-2">
+                    <Cpu size={14} className="text-[#81b7c2]" />
+                    <span className="text-[#8c999c]">CODE:</span>
+                    <span className="text-[#f4f0e8] font-bold">{activeJurisdiction.label}</span>
+                  </div>
+                  <span className="text-[#81b7c2] font-semibold text-[11px]">{analysis.ruleResults.length} Rules Coverage</span>
+                </div>
               </div>
 
               {/* STATUTORY REGULATION AUDIT CENTER PANEL */}
