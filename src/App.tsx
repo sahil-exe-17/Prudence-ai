@@ -126,7 +126,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '1.00 m provided',
       status: 'Fail',
       severity: 'CRITICAL',
-      clause: 'DCR 2026 â€” Table 4.2 Setback Clearances',
+      clause: 'DCR 2026 - Table 4.2 Setback Clearances',
       evidence: 'Site plan callout VIOLATION 1 states Rear Setback Required 4.00 m, Provided 1.00 m (3.00 m deficit). This restricts rear access for service and emergency vehicles.',
       action: 'Increase rear setback by 3.00 m or shift the rear building footprint wall inward.',
       annotation: { x: 14.5, y: 13.0, page: 1, label: 'V1 1.00m' },
@@ -139,7 +139,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '2.00 m provided',
       status: 'Fail',
       severity: 'CRITICAL',
-      clause: 'DCR 2026 â€” Clause 14.2 Road Frontage Setback',
+      clause: 'DCR 2026 - Clause 14.2 Road Frontage Setback',
       evidence: 'Site plan callout VIOLATION 2 states Front Setback Required 6.00 m, Provided 2.00 m from 60 m wide road. 4.00 m shortfall presents high municipal rejection risk.',
       action: 'Increase front setback by 4.00 m or move the building footprint back from the 60 m wide public road.',
       annotation: { x: 14.5, y: 33.5, page: 1, label: 'V2 2.00m' },
@@ -152,7 +152,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '0.90 m provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'NBC 2016 â€” Part 4 Sec 4.3 (Egress Stairways)',
+      clause: 'NBC 2016 - Part 4 Sec 4.3 (Egress Stairways)',
       evidence: 'Typical floor plan callout VIOLATION 3 states Stair Width Required >= 1.20 m, Provided 0.90 m. Restricted width impairs safe occupant egress during emergency evacuation.',
       action: 'Widen the staircase flight by 0.30 m to meet the NBC clear width requirement.',
       annotation: { x: 33.5, y: 16.0, page: 1, label: 'V3 0.90m' },
@@ -165,7 +165,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '1.20 m provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'NBC 2016 â€” Part 4 Sec 4.2 (Corridor Standards)',
+      clause: 'NBC 2016 - Part 4 Sec 4.2 (Corridor Standards)',
       evidence: 'Typical floor plan callout VIOLATION 4 states Corridor Width Required >= 1.50 m, Provided 1.20 m. Corridors serving multi-unit floors require min 1.50 m clear span.',
       action: 'Increase central corridor width by 0.30 m across the residential floor passage.',
       annotation: { x: 35.5, y: 24.5, page: 1, label: 'V4 1.20m' },
@@ -178,7 +178,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '24.70 m provided',
       status: 'Fail',
       severity: 'CRITICAL',
-      clause: 'NBC 2016 & DCR â€” High-Rise Height Limits',
+      clause: 'NBC 2016 & DCR - High-Rise Height Limits',
       evidence: 'Front elevation & section drawing show building height 24.70 m against permissible <= 24.00 m (0.70 m excess height above zoning limit).',
       action: 'Reduce top floor parapet/headroom height by 0.70 m or obtain high-rise planning board approval.',
       annotation: { x: 62.0, y: 28.0, page: 1, label: 'V5 24.70m' },
@@ -191,7 +191,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '25 car parking spaces provided',
       status: 'Fail',
       severity: 'MAJOR',
-      clause: 'DCR Parking Regulations â€” Off-Street Parking Schedule',
+      clause: 'DCR Parking Regulations - Off-Street Parking Schedule',
       evidence: 'Parking layout drawing shows 42 cars required based on residential unit count, but only 25 bays provided (17 car parking deficit).',
       action: 'Provide 17 additional parking spaces using puzzle stackers or expanding basement 2 layout.',
       annotation: { x: 32.0, y: 76.0, page: 1, label: 'V6 25 cars' },
@@ -204,10 +204,10 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: 'Left side 3.00 m; Right side 3.00 m',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'DCR 2026 â€” Table 4.1 Side Margin Schedule',
+      clause: 'DCR 2026 - Table 4.1 Side Margin Schedule',
       evidence: 'Site plan labels show SIDE SETBACK 3.00 m provided on both left and right property boundaries, satisfying DCR open space criteria.',
       action: 'Compliant. Both side margins meet the mandatory statutory setback threshold.',
-      annotation: { x: 8.5, y: 23.0, page: 1, label: ' PASS 3.0m' },
+      annotation: { x: 8.5, y: 23.0, page: 1, label: 'PASS 3.0m' },
     },
     {
       id: 'GH-DCR-PASS-02',
@@ -217,7 +217,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '60.00 m wide road shown',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'DCR Regulation 12.1 â€” Access Road Standards',
+      clause: 'DCR Regulation 12.1 - Access Road Standards Road Standards',
       evidence: 'Site plan frontage label displays 60.0 m wide public road, significantly exceeding the 6.00 m access minimum for residential multi-family work.',
       action: 'Compliant. Road width is well above the statutory access requirement.',
     },
@@ -229,7 +229,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '2,850.00 sq.m proposed',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'DCR FSI Schedule â€” Plot FAR Utilization',
+      clause: 'DCR FSI Schedule - Plot FAR Utilization',
       evidence: 'Area statement table shows permissible gross area 3,000.00 sq.m, proposed 2,850.00 sq.m (150 sq.m unutilized buffer).',
       action: 'Compliant. Proposed floor space ratio is within permissible statutory limits.',
     },
@@ -241,7 +241,7 @@ function makeAnalysis(file: File, jurisdiction: string): Analysis {
       current: '100% Match Verified',
       status: 'Pass',
       severity: 'INFO',
-      clause: 'RERA Act 2016 â€” Section 4(2)(l) Allottee Disclosure',
+      clause: 'RERA Act 2016 - Section 4(2)(l) Allottee Disclosure',
       evidence: 'Unit carpet area schedule matches the architectural floor plans within 1.4% tolerance, meeting mandatory RERA homebuyer disclosure standards.',
       action: 'Compliant. Ready for statutory homebuyer agreement disclosure.',
     },
@@ -619,7 +619,7 @@ function App() {
                   onClick={() => handleNavigate('landing')}
                   className="btn-secondary text-xs hover:border-[#f26a3d] hover:text-[#f26a3d]"
                 >
-                  <span>â† Home</span>
+                  <span>Home</span>
                 </button>
 
               <button
@@ -644,9 +644,9 @@ function App() {
             </div>
           </header>
 
-          {/* Main Workspace â€” Fixed height, two independent scroll panels */}
+          {/* Main Workspace - Fixed height, two independent scroll panels */}
           <main className="flex flex-1 overflow-hidden flex-col lg:flex-row">
-            {/* Left Panel â€” scrollable independently */}
+            {/* Left Panel - scrollable independently */}
             <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 overflow-y-auto">
               {/* Subheader & Kicker */}
               <div className="flex flex-col gap-0.5">
@@ -658,8 +658,7 @@ function App() {
                     <h1 className="font-space text-2xl md:text-3xl font-semibold tracking-tight text-[#f4f0e8]">
                       Drawing Analysis
                     </h1>
-                    <p className="font-sans text-xs text-[#8c999c]">
-                      {file ? file.name : 'See the risk before it reaches the site.'}
+                    <p className="font-sans text-xs text-[#8c999c]">• {file ? file.name : 'See the risk before it reaches the site.'}
                     </p>
                   </div>
 
@@ -809,8 +808,7 @@ function App() {
                       '--rz': `${dragState.rz}deg`,
                     }}
                   >
-                    <div className="preview w-full h-full flex items-center justify-center relative">
-                      {file ? (
+                    <div className="preview w-full h-full flex items-center justify-center relative">• {file ? (
                         <DrawingPreview
                           file={file}
                           previewUrl={previewUrl}
@@ -857,7 +855,7 @@ function App() {
               </div>
             </section>
 
-            {/* Right Panel â€” scrollable independently */}
+            {/* Right Panel - scrollable independently */}
             <aside className="w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
               {/* AGENT REASONING Panel */}
               <div className="card-prudence p-4 flex flex-col gap-3">
@@ -866,7 +864,7 @@ function App() {
                     AGENT REASONING & COMPLIANCE SCAN
                   </span>
                   <span className="font-mono text-[9px] font-bold text-[#81b7c2] bg-[#81b7c2]/10 border border-[#81b7c2]/30 px-2 py-0.5 rounded">
-                    â€¢ {file ? 'ANALYSIS COMPLETE' : 'AWAITING UPLOAD'}
+                    • {file ? 'ANALYSIS COMPLETE' : 'AWAITING UPLOAD'}
                   </span>
                 </div>
 
@@ -946,7 +944,7 @@ function App() {
                           {/* Card Top Row */}
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <span className="badge-code font-mono text-[10px] px-2 py-0.5 rounded bg-white/10 text-[#f4f0e8] font-bold">
-                              {rule.pack} Â· {rule.id}
+                              {rule.pack} • {rule.id}
                             </span>
 
                             {isPass ? (
@@ -967,7 +965,7 @@ function App() {
 
                           {/* Requirement vs Provided Summary */}
                           <p className="font-mono text-xs text-[#8c999c] mt-1">
-                            Required: <span className="text-[#f4f0e8] font-semibold">{rule.required}</span> Â· Provided: <span className="text-[#f4f0e8] font-semibold">{rule.current}</span>
+                            Required: <span className="text-[#f4f0e8] font-semibold">{rule.required}</span> • Provided: <span className="text-[#f4f0e8] font-semibold">{rule.current}</span>
                           </p>
 
                           {/* EXPANDED DETAILS INSIDE CARD WHEN SELECTED */}
@@ -1035,7 +1033,7 @@ function App() {
                                   className="btn-orange text-xs h-8 flex-1"
                                 >
                                   <Sparkles size={13} />
-                                  <span>Consult PRUDENCE AI â†—</span>
+                                  <span>Consult PRUDENCE AI &rarr;</span>
                                 </button>
                               </div>
                             </div>
@@ -1178,7 +1176,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
         {/* Simple, Attractive Sentence Subtitle */}
         <p className="mt-6 font-sans text-base sm:text-lg text-[#8c999c] max-w-2xl leading-relaxed relative z-10 backdrop-blur-xs">
-          Upload 2D blueprints or 3D CAD models â€” spot setback deficits, FSI breaches, and NBC fire safety risks before a single brick is laid.
+          Upload 2D blueprints or 3D CAD models - spot setback deficits, FSI breaches, and NBC fire safety risks before a single brick is laid.
         </p>
 
         {/* High-Tech Crazy Aesthetic Primary CTA */}
@@ -1291,10 +1289,10 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
                 <p className="font-mono text-xs text-[#81b7c2] mt-1">
                   {activeTab === 'v1'
-                    ? 'BBMP Bylaws 2026 â€” Clause 14.2 (Table 4.1)'
+                    ? 'BBMP Bylaws 2026 - Clause 14.2 (Table 4.1)'
                     : activeTab === 'v2'
-                    ? 'National Building Code 2016 â€” Part 4 Sec 3.2'
-                    : 'Development Control Rules â€” Open Plot Ratio'}
+                    ? 'National Building Code 2016 - Part 4 Sec 3.2'
+                    : 'Development Control Rules - Open Plot Ratio'}
                 </p>
 
                 {/* Audit Metrics Table */}
@@ -1356,7 +1354,7 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
       {/* Sleek Minimal Footer */}
       <footer className="border-t border-white/10 py-8 text-center font-mono text-xs text-[#8c999c] relative z-10">
-        PRUDENCE AI â€” Architectural Code Compliance Intelligence Engine
+        PRUDENCE AI - Architectural Code Compliance Intelligence Engine
       </footer>
     </div>
   );
@@ -1373,15 +1371,15 @@ function FormattedMarkdownText({ content }: { content: string }) {
     const stepBlocks = text
       .split(/(?=\[\s*Step\s*\d+|STEP\s*\d+|Step\s*\d+|\bStep\s+\d+|\bSTEP\s+\d+)/im)
       .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !/^[\s|vâž”\->=]+$/.test(s));
+      .filter((s) => s.length > 0 && !/^[\s|v➔\->=]+$/.test(s));
 
     if (stepBlocks.length < 2) return null;
 
     const parsedSteps: Array<{ stepNum: string; title: string; description: string }> = [];
 
     stepBlocks.forEach((block) => {
-      const cleanBlock = block.replace(/^[\s|vâž”\->=]+\n/g, '').trim();
-      const lines = cleanBlock.split('\n').map((l) => l.trim()).filter((l) => !/^[\s|vâž”\->=]+$/.test(l));
+      const cleanBlock = block.replace(/^[\s|v➔\->=]+\n/g, '').trim();
+      const lines = cleanBlock.split('\n').map((l) => l.trim()).filter((l) => !/^[\s|v➔\->=]+$/.test(l));
       if (lines.length === 0) return;
 
       const firstLine = lines[0] || '';
@@ -1392,7 +1390,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
       const description = lines
         .slice(1)
         .join(' ')
-        .replace(/^[\s|vâž”\->=]+/, '')
+        .replace(/^[\s|v➔\->=]+/, '')
         .trim();
 
       if (title && title.length > 1) {
@@ -1478,8 +1476,8 @@ function FormattedMarkdownText({ content }: { content: string }) {
       }
 
       // Detect List Line
-      if (/^\s*[\-\*\â€¢\d+\.]\s+/.test(line)) {
-        currentListItems.push(line.replace(/^\s*[\-\*\â€¢\d+\.]\s+/, ''));
+      if (/^\s*[\-\*\•\d+\.]\s+/.test(line)) {
+        currentListItems.push(line.replace(/^\s*[\-\*\•\d+\.]\s+/, ''));
         continue;
       } else {
         flushList();
@@ -1747,7 +1745,7 @@ function AIChatDrawer({
                 </div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: '#81b7c2', display: 'flex', alignItems: 'center', gap: 5, marginTop: 1 }}>
                   <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#81b7c2', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-                  GROUNDED Â· ACTIVE BLUEPRINT
+                  GROUNDED &bull; ACTIVE BLUEPRINT
                 </div>
               </div>
             </div>
@@ -1794,7 +1792,7 @@ function AIChatDrawer({
                 marginBottom: 4,
                 textTransform: 'uppercase',
               }}>
-                {msg.role === 'user' ? 'â€” you' : 'â€” prudence'}
+                {msg.role === 'user' ? '— you' : '— prudence'}
               </div>
               <div
                 style={{
@@ -1950,7 +1948,7 @@ function AIChatDrawer({
             color: '#2e3a3d',
             letterSpacing: '0.06em',
           }}>
-            PRUDENCE Â· GEMINI 2.5 PRO Â· RERA / NBC / DCR GROUNDED
+            PRUDENCE &bull; GEMINI 2.5 PRO &bull; RERA / NBC / DCR GROUNDED
           </div>
         </form>
       </div>
