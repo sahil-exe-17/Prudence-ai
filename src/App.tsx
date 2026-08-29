@@ -631,8 +631,8 @@ function App() {
 
           {/* Main Workspace (Independent Scrollable Dual Panels) */}
           <main className="flex flex-1 flex-col lg:flex-row h-[calc(100vh-56px)] max-h-[calc(100vh-56px)] overflow-hidden w-full">
-            {/* Left Section: Main Analysis & Canvas (Fixed Viewport Lock) */}
-            <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 h-full max-h-full overflow-hidden shrink">
+            {/* Left Section: Main Analysis & Canvas (Scrollable Panel) */}
+            <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 h-full max-h-full overflow-y-auto shrink">
               {/* Subheader & Kicker */}
               <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#f26a3d]">
@@ -708,7 +708,7 @@ function App() {
                 </div>
               </div>
 
-              {/* Drawing Canvas Container (Viewport Auto-Fit) */}
+              {/* Drawing Canvas Container (Full Size & Spacious Min-Height) */}
               <div
                 ref={previewContainerRef}
                 onDragOver={(e) => {
@@ -717,7 +717,7 @@ function App() {
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={onDrop}
-                className="relative flex-1 card-prudence cad-grid-bg overflow-hidden flex flex-col min-h-0"
+                className="relative flex-1 min-h-[520px] sm:min-h-[580px] card-prudence cad-grid-bg overflow-hidden flex flex-col rounded-lg shadow-xl"
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
               >
