@@ -26,15 +26,20 @@ export default async function handler(req, res) {
     const groqKey = process.env.GROQ_API_KEY || process.env.PRUDENCE_GROQ_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    const systemInstruction = `You are PRUDENCE AI, an expert architectural and building code compliance assistant. You help users understand building drawings, municipal rules (DCR, NBC 2016, RERA), and violation mitigation steps.
+    const systemInstruction = `You are PRUDENCE, a building compliance advisor. You help architects, builders, and project managers understand drawing violations, fix them, and get approvals.
 
-Instructions for formatting your response:
-1. Do NOT format every answer as a table. Use natural markdown paragraphs, bullet points, and numbered lists for general explanations, advice, and summaries.
-2. Use markdown tables ONLY when presenting structured comparison data, measurement metrics, or multi-column checklists where a table improves clarity.
-3. When explaining workflows, approval stages, or process steps, include visual workflow diagrams using ASCII flowcharts (e.g. [ Step 1: Upload Plan ] ➔ [ Step 2: Setback Audit ] ➔ [ Step 3: Approval Certificate ]) or code blocks.
-4. Keep answers concise, professional, and directly grounded in the drawing data provided.
+Talk like a knowledgeable person explaining something clearly. Not like a government document or a technical manual.
 
-Current Drawing Data: ${JSON.stringify(analysis).slice(0, 4000)}`;
+How to respond:
+- Use short paragraphs and plain sentences. Avoid technical jargon unless you briefly explain it in the same line.
+- Do not format your answer as a table. Only use a table if the user specifically asks for a comparison or schedule.
+- Do not produce ASCII flowcharts, checklists with checkboxes, or sections titled things like "Quick-Start Checklist" or "Detailed Workflow".
+- If someone asks how to fix a violation, just explain it conversationally: what to do, who does it, and why.
+- If a sequence of steps is genuinely needed, use a plain numbered list with one line per step. Nothing else.
+- Keep your answer as short as it can be while still being complete. Do not repeat yourself.
+- No emoji anywhere in your response.
+
+Current drawing data: ${JSON.stringify(analysis).slice(0, 3000)}`;
 
     if (groqKey) {
       const groqModel = process.env.PRUDENCE_GROQ_MODEL || "openai/gpt-oss-120b";
@@ -55,7 +60,7 @@ Current Drawing Data: ${JSON.stringify(analysis).slice(0, 4000)}`;
           model: groqModel,
           messages: messages,
           temperature: 0.4,
-          max_tokens: 1000,
+          max_tokens: 800,
         }),
       });
 
@@ -68,7 +73,7 @@ Current Drawing Data: ${JSON.stringify(analysis).slice(0, 4000)}`;
     }
 
     if (geminiKey) {
-      const geminiModel = "gemini-3.1-flash-lite";
+      const geminiModel = "gemini-2.0-flash";
       const contents = [];
       for (const m of history) {
         contents.push({
@@ -86,7 +91,7 @@ Current Drawing Data: ${JSON.stringify(analysis).slice(0, 4000)}`;
           body: JSON.stringify({
             contents,
             systemInstruction: { parts: [{ text: systemInstruction }] },
-            generationConfig: { temperature: 0.4, maxOutputTokens: 1000 },
+            generationConfig: { temperature: 0.4, maxOutputTokens: 800 },
           }),
         }
       );
@@ -99,25 +104,17 @@ Current Drawing Data: ${JSON.stringify(analysis).slice(0, 4000)}`;
       }
     }
 
-    // Smart Fallback response if API key is not configured or fails
-    const fallbackResponse = `### PRUDENCE AI Assistant
+    // Fallback when no API key is configured
+    const fallbackResponse = `No API key is configured yet. Add a GROQ_API_KEY or GEMINI_API_KEY to your environment variables to enable the AI chat.
 
-I am grounded in your loaded drawing data **"${analysis.documentName || "Current Plan"}"**.
-
-**Key Findings:**
-- **Status:** ${analysis.status || "Review Pending"} (Score: ${analysis.score || 0}%)
-- **Risk Level:** ${analysis.risk || "Low"}
-- **Jurisdiction:** ${analysis.jurisdiction || "BBMP 2026"}
-
-**Active Violations:**
-${(analysis.violations || []).map((v) => `- **[${v.severity || "INFO"}] ${v.title}**: ${v.note || `Required: ${v.required}, Found: ${v.found}`}`).join("\n") || "- No major violations detected."}
-
-*Tip: Add your \`GROQ_API_KEY\` or \`GEMINI_API_KEY\` to enable dynamic AI chat!*`;
+Current plan: ${analysis.documentName || "No plan loaded"}
+Status: ${analysis.status || "Unknown"} (Score: ${analysis.score || 0}%)
+Violations found: ${(analysis.violations || []).length}`;
 
     res.status(200).json({ response: fallbackResponse });
   } catch (error) {
     res.status(200).json({
-      response: "I encountered an error processing your request. Please check server logs.",
+      response: "Something went wrong on the server. Please try again.",
     });
   }
 }
