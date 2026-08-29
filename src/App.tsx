@@ -583,15 +583,15 @@ function App() {
             onUpload={() => inputRef.current?.click()}
           />
         ) : (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full animate-page-enter">
             {/* Top Header Bar inside Workspace */}
             <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#08090a]/90 px-6 backdrop-blur-md">
               {/* Brand */}
               <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigate('landing')}>
-                <div className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-[#111416] p-1 transition group-hover:scale-105 group-hover:border-[#f26a3d]">
+                <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-xl border border-[#f26a3d]/40 bg-[#111416] p-1.5 shadow-lg shadow-[#f26a3d]/15 logo-glow-box transition-all duration-300 group-hover:scale-105 group-hover:border-[#f26a3d] group-hover:shadow-[#f26a3d]/35">
                   <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
                 </div>
-                <span className="font-space text-base font-bold tracking-tight text-[#f4f0e8] transition group-hover:text-[#f26a3d]">PRUDENCE</span>
+                <span className="font-space text-lg md:text-xl font-extrabold tracking-tight transition group-hover:scale-105"><span className="text-white">PRUDENCE</span> <span className="text-[#f26a3d]">AI</span></span>
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c]">
                   AI COMPLIANCE AGENT
                 </span>
@@ -655,7 +655,7 @@ function App() {
               {/* Subheader & Kicker */}
               <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#f26a3d]">
-                  PRUDENCE AI / COMPLIANCE WORKSPACE
+                  <span className="text-white">PRUDENCE</span> <span className="text-[#f26a3d]">AI</span> / COMPLIANCE WORKSPACE
                 </span>
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
@@ -1144,10 +1144,10 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
       {/* Sleek Vercel Header Navbar */}
       <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-white/10 bg-[#08090a]/90 px-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-[#111416] p-1.5 shadow-sm">
+          <div className="flex h-11 w-11 md:h-12 md:w-12 items-center justify-center rounded-xl border border-[#f26a3d]/50 bg-[#111416] p-2 shadow-xl shadow-[#f26a3d]/20 logo-glow-box transition-all duration-300 hover:scale-105 hover:border-[#f26a3d] hover:shadow-[#f26a3d]/40">
             <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
           </div>
-          <span className="font-space text-lg font-bold tracking-tight text-[#f4f0e8]">PRUDENCE AI</span>
+          <span className="font-space text-lg font-bold tracking-tight"><span className="text-white">PRUDENCE</span> <span className="text-[#f26a3d]">AI</span></span>
           <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c] bg-white/5 px-2 py-0.5 rounded border border-white/10">
             BBMP 2026 AUDIT ENGINE
           </span>

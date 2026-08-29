@@ -628,3 +628,34 @@
 }
 
 
+
+/* PAGE & CONTAINER TRANSITION ANIMATIONS */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-page-enter {
+  animation: pageEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes glowPulseBorder {
+  0%, 100% {
+    border-color: rgba(242, 106, 61, 0.3);
+    box-shadow: 0 0 10px rgba(242, 106, 61, 0.1);
+  }
+  50% {
+    border-color: rgba(242, 106, 61, 0.7);
+    box-shadow: 0 0 20px rgba(242, 106, 61, 0.3);
+  }
+}
+
+.logo-glow-box {
+  animation: glowPulseBorder 4s ease-in-out infinite;
+}
