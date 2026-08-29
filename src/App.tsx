@@ -1347,6 +1347,166 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
   );
 }
 
+// AESTHETIC HIGH-TECH MARKDOWN TABLE & TEXT PARSER
+function FormattedMarkdownText({ content }: { content: string }) {
+  if (!content) return null;
+
+  const parseMarkdownBlocks = (text: string) => {
+    const lines = text.split('\n');
+    const blocks: Array<{ type: 'table' | 'header' | 'list' | 'text'; content: any }> = [];
+    let currentTableLines: string[] = [];
+    let currentListItems: string[] = [];
+
+    const flushTable = () => {
+      if (currentTableLines.length > 0) {
+        const parsed = parseTableLines(currentTableLines);
+        if (parsed) blocks.push({ type: 'table', content: parsed });
+        currentTableLines = [];
+      }
+    };
+
+    const flushList = () => {
+      if (currentListItems.length > 0) {
+        blocks.push({ type: 'list', content: [...currentListItems] });
+        currentListItems = [];
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Detect Table Line
+      if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+        flushList();
+        currentTableLines.push(line.trim());
+        continue;
+      } else {
+        flushTable();
+      }
+
+      // Detect List Line
+      if (/^\s*[\-\*•\d+\.]\s+/.test(line)) {
+        currentListItems.push(line.replace(/^\s*[\-\*•\d+\.]\s+/, ''));
+        continue;
+      } else {
+        flushList();
+      }
+
+      // Detect Header Line
+      if (line.startsWith('#')) {
+        const level = line.match(/^#+/)?.[0].length || 1;
+        const headerText = line.replace(/^#+\s*/, '');
+        blocks.push({ type: 'header', content: { level, text: headerText } });
+        continue;
+      }
+
+      // Regular Paragraph / Line
+      if (line.trim().length > 0) {
+        blocks.push({ type: 'text', content: line });
+      }
+    }
+
+    flushTable();
+    flushList();
+
+    return blocks;
+  };
+
+  const parseTableLines = (tableLines: string[]) => {
+    const cleanRows = tableLines
+      .filter((line) => !/^[\|\s\-\:\+]+$/.test(line)) // Skip delimiter rows like |---|---|
+      .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
+
+    if (cleanRows.length === 0) return null;
+
+    const headers = cleanRows[0];
+    const rows = cleanRows.slice(1);
+    return { headers, rows };
+  };
+
+  const renderInlineFormatting = (str: string) => {
+    const parts = str.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={idx} className="font-semibold text-[#f4f0e8]">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
+
+  const blocks = parseMarkdownBlocks(content);
+
+  return (
+    <div className="space-y-2.5 text-xs text-[#f4f0e8] leading-relaxed">
+      {blocks.map((block, idx) => {
+        if (block.type === 'table' && block.content) {
+          const { headers, rows } = block.content;
+          return (
+            <div key={idx} className="my-3 overflow-x-auto rounded-lg border border-white/15 bg-[#08090a] shadow-2xl">
+              <table className="w-full min-w-full text-left font-sans text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-white/15 bg-[#151a1c]">
+                    {headers.map((h: string, hIdx: number) => (
+                      <th
+                        key={hIdx}
+                        className="px-3.5 py-2.5 font-mono text-[11px] font-bold text-[#f26a3d] tracking-wide uppercase border-r border-white/10 last:border-r-0"
+                      >
+                        {renderInlineFormatting(h)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {rows.map((row: string[], rIdx: number) => (
+                    <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-[#08090a]' : 'bg-[#111416]'}>
+                      {row.map((cell: string, cIdx: number) => (
+                        <td key={cIdx} className="px-3.5 py-2 text-[#f4f0e8] border-r border-white/5 last:border-r-0 align-top">
+                          {renderInlineFormatting(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+
+        if (block.type === 'header') {
+          return (
+            <h4 key={idx} className="font-space font-bold text-sm text-[#f26a3d] mt-3 mb-1">
+              {renderInlineFormatting(block.content.text)}
+            </h4>
+          );
+        }
+
+        if (block.type === 'list') {
+          return (
+            <ul key={idx} className="space-y-1 my-1.5 pl-1">
+              {block.content.map((item: string, itemIdx: number) => (
+                <li key={itemIdx} className="flex items-start gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f26a3d] mt-1.5 shrink-0" />
+                  <span>{renderInlineFormatting(item)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p key={idx} className="text-[#f4f0e8]/90">
+            {renderInlineFormatting(block.content)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 function AIChatDrawer({
   isOpen,
   onClose,
@@ -1389,7 +1549,7 @@ function AIChatDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
-      <div className="flex h-full w-full max-w-md flex-col border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] shadow-2xl">
+      <div className="flex h-full w-full max-w-lg sm:max-w-xl flex-col border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-5 py-4 bg-[#111416]">
           <div className="flex items-center gap-3">
@@ -1436,13 +1596,17 @@ function AIChatDrawer({
               )}
 
               <div
-                className={`max-w-[85%] rounded p-3 leading-relaxed ${
+                className={`max-w-[90%] rounded p-3 leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-[#f26a3d] text-[#08090a] font-medium'
+                    ? 'bg-[#f26a3d] text-[#08090a] font-medium font-sans'
                     : 'border border-[rgba(255,255,255,0.08)] bg-[#111416] text-[#f4f0e8]'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.role === 'user' ? (
+                  <div className="whitespace-pre-wrap font-medium">{msg.content}</div>
+                ) : (
+                  <FormattedMarkdownText content={msg.content} />
+                )}
               </div>
 
               {msg.role === 'user' && (
