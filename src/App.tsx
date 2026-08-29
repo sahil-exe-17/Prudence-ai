@@ -1,3 +1,4 @@
+import GenerateButton from './components/GenerateButton';
 import {
   ArrowRight,
   Bell,
