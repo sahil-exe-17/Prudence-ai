@@ -595,6 +595,10 @@ function App() {
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c]">
                   AI COMPLIANCE AGENT
                 </span>
+                <span className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-[#f26a3d]/30 bg-[#f26a3d]/10 font-mono text-[10px] font-bold text-[#f26a3d] animate-pulse">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f26a3d]" />
+                  CAD WORK IN PROGRESS
+                </span>
               </div>
 
               {/* Center Search Box */}
@@ -671,6 +675,18 @@ function App() {
                     <span>Start new analysis</span>
                   </button>
                 </div>
+              </div>
+
+              {/* CAD Work In Progress Status Banner */}
+              <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-lg border border-[#f26a3d]/30 bg-[#111416] font-mono text-xs text-[#81b7c2] shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping shrink-0" />
+                  <span className="font-bold text-[#f26a3d] uppercase tracking-wider">CAD WORK IN PROGRESS:</span>
+                  <span className="text-[#8c999c]">Live CAD engine, DWG / DXF vector parsing & interactive drawing tools under active integration.</span>
+                </div>
+                <span className="hidden sm:inline-block text-[10px] text-[#f26a3d] font-bold bg-[#f26a3d]/10 border border-[#f26a3d]/30 px-2 py-0.5 rounded shrink-0">
+                  v0.9 BETA
+                </span>
               </div>
 
               {/* Jurisdiction Bar & Rule Packs */}
