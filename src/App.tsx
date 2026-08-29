@@ -1348,12 +1348,52 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 }
 
 // AESTHETIC HIGH-TECH MARKDOWN TABLE, WORKFLOW & TEXT PARSER
+// AESTHETIC HIGH-TECH MARKDOWN TABLE, WORKFLOW & TEXT PARSER
 function FormattedMarkdownText({ content }: { content: string }) {
   if (!content) return null;
 
+  const parseWorkflowSteps = (text: string) => {
+    // Split by step markers: [ Step 1 ], STEP 01, Step 1, 1ï¸âƒ£, etc.
+    const stepBlocks = text
+      .split(/(?=\[\s*Step\s*\d+|STEP\s*\d+|Step\s*\d+|^\s*\d+[\uFE0F\u20E3]?\s*[\-\.\)]|\bStep\s+\d+)/im)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && !/^[\s|vâž”\->=]+$/.test(s));
+
+    if (stepBlocks.length < 1) return null;
+
+    const parsedSteps: Array<{ stepNum: string; title: string; description: string }> = [];
+
+    stepBlocks.forEach((block) => {
+      const cleanBlock = block.replace(/^[\s|vâž”\->=]+\n/g, '').trim();
+      const lines = cleanBlock.split('\n').map((l) => l.trim()).filter((l) => !/^[\s|vâž”\->=]+$/.test(l));
+      if (lines.length === 0) return;
+
+      const firstLine = lines[0] || '';
+      const titleMatch = firstLine.match(/\[?\s*(?:Step\s*\d+|STEP\s*\d+|^\d+[\.\)]?)?\s*:?\s*([^\]]+)\]?/i);
+      let title = titleMatch ? titleMatch[1].trim() : firstLine;
+      title = title.replace(/^[^a-zA-Z0-9]+/, '').trim();
+
+      const description = lines
+        .slice(1)
+        .join(' ')
+        .replace(/^[\s|vâž”\->=]+/, '')
+        .trim();
+
+      if (title && title.length > 1) {
+        parsedSteps.push({
+          stepNum: String(parsedSteps.length + 1).padStart(2, '0'),
+          title: title,
+          description: description,
+        });
+      }
+    });
+
+    return parsedSteps.length > 0 ? parsedSteps : null;
+  };
+
   const parseMarkdownBlocks = (text: string) => {
     const lines = text.split('\n');
-    const blocks: Array<{ type: 'table' | 'header' | 'list' | 'code' | 'text'; content: any }> = [];
+    const blocks: Array<{ type: 'table' | 'header' | 'list' | 'code' | 'workflow' | 'text'; content: any }> = [];
     let currentTableLines: string[] = [];
     let currentListItems: string[] = [];
     let inCodeBlock = false;
@@ -1381,10 +1421,20 @@ function FormattedMarkdownText({ content }: { content: string }) {
       // Code Block / Workflow Fence Detection ```
       if (line.trim().startsWith('```')) {
         if (inCodeBlock) {
-          blocks.push({
-            type: 'code',
-            content: { lang: codeLang || 'workflow', code: codeLines.join('\n') },
-          });
+          const codeText = codeLines.join('\n');
+          const steps = parseWorkflowSteps(codeText);
+
+          if (codeLang === 'workflow' || codeLang === 'mermaid' || steps) {
+            blocks.push({
+              type: 'workflow',
+              content: { steps: steps || parseWorkflowSteps(codeText) || [], raw: codeText },
+            });
+          } else {
+            blocks.push({
+              type: 'code',
+              content: { lang: codeLang || 'CODE', code: codeText },
+            });
+          }
           inCodeBlock = false;
           codeLines = [];
           codeLang = '';
@@ -1412,8 +1462,8 @@ function FormattedMarkdownText({ content }: { content: string }) {
       }
 
       // Detect List Line
-      if (/^\s*[\-\*â€¢\d+\.]\s+/.test(line)) {
-        currentListItems.push(line.replace(/^\s*[\-\*â€¢\d+\.]\s+/, ''));
+      if (/^\s*[\-\*\â€¢\d+\.]\s+/.test(line)) {
+        currentListItems.push(line.replace(/^\s*[\-\*\â€¢\d+\.]\s+/, ''));
         continue;
       } else {
         flushList();
@@ -1441,7 +1491,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
 
   const parseTableLines = (tableLines: string[]) => {
     const cleanRows = tableLines
-      .filter((line) => !/^[\|\s\-\:\+]+$/.test(line)) // Skip delimiter rows like |---|---|
+      .filter((line) => !/^[\|\s\-\:\+]+$/.test(line))
       .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
 
     if (cleanRows.length === 0) return null;
@@ -1452,6 +1502,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
   };
 
   const renderInlineFormatting = (str: string) => {
+    if (!str) return null;
     const parts = str.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, idx) => {
       if (part.startsWith('**') && part.endsWith('**')) {
@@ -1465,69 +1516,33 @@ function FormattedMarkdownText({ content }: { content: string }) {
     });
   };
 
-  const parseWorkflowSteps = (text: string) => {
-    const stepBlocks = text
-      .split(/(?=\[\s*Step\s*\d+|Step\s*\d+|\d+ï¸âƒ£)/i)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-
-    if (stepBlocks.length < 2) return null;
-
-    return stepBlocks.map((block, idx) => {
-      const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
-      const firstLine = lines[0] || '';
-      const titleMatch = firstLine.match(/\[?\s*(?:Step\s*\d+|^\d+ï¸âƒ£)?\s*:?\s*([^\]]+)\]?/i);
-      const title = titleMatch ? titleMatch[1].trim() : firstLine.replace(/^[^a-zA-Z0-9]+/, '');
-      const description = lines
-        .slice(1)
-        .join(' ')
-        .replace(/^[âž”\->=]+\s*/, '')
-        .trim();
-
-      return {
-        stepNum: String(idx + 1).padStart(2, '0'),
-        title: title || `Step ${idx + 1}`,
-        description: description || '',
-      };
-    });
-  };
-
   const blocks = parseMarkdownBlocks(content);
 
   return (
-    <div className="space-y-2.5 text-xs text-[#f4f0e8] leading-relaxed">
+    <div className="space-y-3 text-xs text-[#f4f0e8] leading-relaxed">
       {blocks.map((block, idx) => {
-        if (block.type === 'code' && block.content) {
-          const { lang, code } = block.content;
-          const isWorkflow =
-            lang === 'mermaid' ||
-            lang === 'workflow' ||
-            code.includes('-->') ||
-            code.includes('->') ||
-            code.includes('âž”') ||
-            code.includes('[ Step');
-          const steps = isWorkflow ? parseWorkflowSteps(code) : null;
-
+        if (block.type === 'workflow') {
+          const { steps, raw } = block.content;
           if (steps && steps.length > 0) {
             return (
               <div key={idx} className="my-4 p-4 rounded-xl border border-[#f26a3d]/35 bg-[#08090a] shadow-2xl space-y-3">
                 <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
                   <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping" />
-                    âš¡ VISUAL WORKFLOW & PROCESS DIAGRAM
+                    VISUAL WORKFLOW & ACTION PLAN
                   </span>
                   <span className="text-[#8c999c] font-mono">{steps.length} STAGES</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  {steps.map((step, sIdx) => (
+                  {steps.map((step: any, sIdx: number) => (
                     <div
                       key={sIdx}
                       className="group relative flex flex-col gap-1.5 p-3.5 rounded-lg border border-white/10 bg-[#111416] hover:border-[#f26a3d]/60 hover:bg-[#151a1c] transition-all shadow-md"
                     >
                       <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#f26a3d]">
                         <span>STEP {step.stepNum}</span>
-                        <span className="text-[#81b7c2] group-hover:translate-x-1 transition-transform">âž”</span>
+                        <ArrowRight size={12} className="text-[#81b7c2] group-hover:translate-x-1 transition-transform" />
                       </div>
                       <div className="font-space text-xs font-bold text-[#f4f0e8] leading-tight">
                         {renderInlineFormatting(step.title)}
@@ -1547,7 +1562,20 @@ function FormattedMarkdownText({ content }: { content: string }) {
           return (
             <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
               <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
-                <span>{isWorkflow ? 'âš¡ WORKFLOW & PROCESS DIAGRAM' : `SPECIFICATION / ${lang.toUpperCase() || 'CODE'}`}</span>
+                <span>WORKFLOW & ACTION PLAN</span>
+                <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
+              </div>
+              <pre className="whitespace-pre overflow-x-auto leading-relaxed">{raw}</pre>
+            </div>
+          );
+        }
+
+        if (block.type === 'code' && block.content) {
+          const { lang, code } = block.content;
+          return (
+            <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
+                <span>{lang.toUpperCase() || 'SPECIFICATION'}</span>
                 <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
               </div>
               <pre className="whitespace-pre overflow-x-auto leading-relaxed">{code}</pre>
