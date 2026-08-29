@@ -630,9 +630,9 @@ function App() {
           </header>
 
           {/* Main Workspace (Independent Scrollable Dual Panels) */}
-          <main className="flex flex-1 flex-col lg:flex-row h-[calc(100vh-56px)] max-h-[calc(100vh-56px)] overflow-hidden w-full">
+          <main className="flex flex-1 flex-col lg:flex-row min-h-[calc(100vh-56px)] lg:h-[calc(100vh-56px)] lg:max-h-[calc(100vh-56px)] overflow-y-auto lg:overflow-hidden w-full">
             {/* Left Section: Main Analysis & Canvas (Scrollable Panel) */}
-            <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 h-full max-h-full overflow-y-auto shrink">
+            <section className="w-full lg:flex-1 flex flex-col gap-3 p-4 min-w-0 h-auto lg:h-full lg:max-h-full overflow-y-auto shrink">
               {/* Subheader & Kicker */}
               <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#f26a3d]">
@@ -843,7 +843,7 @@ function App() {
             </section>
 
             {/* Right Section: STATUTORY REGULATION AUDIT CENTER (Independent Scrollable Sidebar) */}
-            <aside className="w-full lg:w-[440px] xl:w-[480px] h-full max-h-full shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
+            <aside className="w-full lg:w-[440px] xl:w-[480px] h-auto lg:h-full lg:max-h-full shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
               {/* AGENT REASONING Panel */}
               <div className="card-prudence p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">

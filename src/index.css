@@ -39,6 +39,30 @@
   }
 }
 
+/* HIGH-TECH STYLED SCROLLBARS FOR DUAL PANELS */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #08090a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f26a3d;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) #08090a;
+}
+
 /* CLEAN DEEP SLATE AMBIENT BACKGROUND WITH SUBTLE CAD GRID */
 .bg-ambient-mesh {
   background-color: #08090a;
