@@ -892,63 +892,63 @@ function App() {
 
             {/* Right Panel - scrollable independently */}
             <aside className="w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
-              {/* VIBRANT HIGH-CONTRAST STATUTORY COMPLIANCE RADAR CARD */}
-              <div className="shrink-0 rounded-2xl border border-[#f26a3d]/40 bg-[#111416] p-4.5 flex flex-col gap-3.5 relative overflow-hidden shadow-2xl shadow-black/80 hover:border-[#f26a3d] transition-all duration-300">
+              {/* BOLD & SPACIOUS STATUTORY COMPLIANCE RADAR CARD */}
+              <div className="shrink-0 rounded-2xl border-2 border-[#f26a3d]/50 bg-[#111416] p-5 flex flex-col gap-4 relative overflow-hidden shadow-2xl hover:border-[#f26a3d] transition-all duration-300">
                 {/* Ambient Background Radial Glow */}
-                <div className={`absolute -right-10 -top-10 w-40 h-40 rounded-full blur-3xl pointer-events-none ${
+                <div className={`absolute -right-10 -top-10 w-48 h-48 rounded-full blur-3xl pointer-events-none ${
                   !file || failCount === 0
-                    ? 'bg-[#27c93f]/20'
+                    ? 'bg-[#27c93f]/25'
                     : failCount <= 2
-                    ? 'bg-[#f26a3d]/20'
-                    : 'bg-[#ff4d4d]/25'
+                    ? 'bg-[#f26a3d]/25'
+                    : 'bg-[#ff4d4d]/30'
                 }`} />
 
                 {/* Header Title & Status */}
-                <div className="flex items-center justify-between z-10 border-b border-white/10 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#f26a3d]/15 border border-[#f26a3d]/40 text-[#f26a3d]">
-                      <Shield size={16} />
+                <div className="flex items-center justify-between z-10 border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f26a3d]/20 border border-[#f26a3d]/50 text-[#f26a3d] shadow-md shadow-[#f26a3d]/20">
+                      <Shield size={18} />
                     </div>
-                    <span className="font-space text-sm font-extrabold tracking-wider text-white uppercase">
+                    <span className="font-space text-base font-extrabold tracking-wider text-white uppercase drop-shadow">
                       STATUTORY COMPLIANCE RADAR
                     </span>
                   </div>
-                  <span className={`font-mono text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border shadow-md flex items-center gap-1.5 ${
+                  <span className={`font-mono text-[11px] font-extrabold uppercase px-3 py-1 rounded-full border shadow-lg flex items-center gap-1.5 ${
                     !file
                       ? 'bg-white/10 border-white/20 text-white'
                       : failCount === 0
-                      ? 'bg-[#27c93f]/20 border-[#27c93f]/50 text-[#27c93f]'
+                      ? 'bg-[#27c93f]/25 border-[#27c93f] text-[#27c93f] shadow-[#27c93f]/20'
                       : failCount <= 2
-                      ? 'bg-[#f26a3d]/20 border-[#f26a3d]/50 text-[#f26a3d]'
-                      : 'bg-[#ff4d4d]/20 border-[#ff4d4d]/50 text-[#ff4d4d]'
+                      ? 'bg-[#f26a3d]/25 border-[#f26a3d] text-[#f26a3d] shadow-[#f26a3d]/20'
+                      : 'bg-[#ff4d4d]/25 border-[#ff4d4d] text-[#ff4d4d] shadow-[#ff4d4d]/20 animate-pulse'
                   }`}>
-                    <span className={`h-1.5 w-1.5 rounded-full animate-ping ${!file ? 'bg-white' : failCount === 0 ? 'bg-[#27c93f]' : 'bg-[#ff4d4d]'}`} />
+                    <span className={`h-2 w-2 rounded-full animate-ping ${!file ? 'bg-white' : failCount === 0 ? 'bg-[#27c93f]' : 'bg-[#ff4d4d]'}`} />
                     {file ? 'ACTIVE AUDIT' : 'STANDBY'}
                   </span>
                 </div>
 
-                {/* High Contrast Score & Risk Layout */}
-                <div className="grid grid-cols-2 gap-3 z-10">
+                {/* Clear & Bold Score and Risk Layout */}
+                <div className="grid grid-cols-2 gap-3.5 z-10">
                   {/* Score Tile */}
-                  <div className="flex flex-col justify-between p-3 rounded-xl border border-white/10 bg-[#08090a] shadow-inner">
+                  <div className="flex flex-col justify-between p-3.5 rounded-xl border border-white/10 bg-[#08090a] shadow-inner">
                     <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
                       COMPLIANCE SCORE
                     </span>
-                    <div className="flex items-baseline gap-1 my-1">
-                      <span className="font-space text-3xl font-black text-white tracking-tight drop-shadow">
+                    <div className="flex items-baseline gap-1.5 my-1.5">
+                      <span className="font-space text-4xl font-black text-white tracking-tight drop-shadow-md">
                         {file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%
                       </span>
-                      <span className="font-mono text-[9px] font-bold text-[#27c93f]">ACCURACY</span>
+                      <span className="font-mono text-[10px] font-extrabold text-[#27c93f] tracking-wide">ACCURACY</span>
                     </div>
                     {/* Glowing Progress Bar */}
-                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mt-1">
+                    <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden mt-1">
                       <div
                         className={`h-full transition-all duration-1000 ease-out ${
                           !file || failCount === 0
-                            ? 'bg-[#27c93f] shadow-[0_0_10px_#27c93f]'
+                            ? 'bg-[#27c93f] shadow-[0_0_12px_#27c93f]'
                             : failCount <= 2
-                            ? 'bg-[#f26a3d] shadow-[0_0_10px_#f26a3d]'
-                            : 'bg-[#ff4d4d] shadow-[0_0_10px_#ff4d4d]'
+                            ? 'bg-[#f26a3d] shadow-[0_0_12px_#f26a3d]'
+                            : 'bg-[#ff4d4d] shadow-[0_0_12px_#ff4d4d]'
                         }`}
                         style={{ width: `${file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%` }}
                       />
@@ -956,12 +956,12 @@ function App() {
                   </div>
 
                   {/* Risk Badge Tile */}
-                  <div className="flex flex-col justify-between p-3 rounded-xl border border-white/10 bg-[#08090a] shadow-inner">
+                  <div className="flex flex-col justify-between p-3.5 rounded-xl border border-white/10 bg-[#08090a] shadow-inner">
                     <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
-                      RISK LEVEL
+                      RISK ASSESSMENT
                     </span>
-                    <div className="my-1">
-                      <span className={`inline-block font-space text-xs font-black px-2.5 py-1 rounded-md border uppercase tracking-wider shadow ${
+                    <div className="my-1.5">
+                      <span className={`inline-block font-space text-xs font-black px-3 py-1 rounded-md border uppercase tracking-wider shadow-md ${
                         !file
                           ? 'bg-white/10 border-white/20 text-white'
                           : failCount === 0
@@ -973,19 +973,19 @@ function App() {
                         {!file ? 'NONE' : failCount === 0 ? 'LOW RISK' : failCount <= 2 ? 'MODERATE' : 'HIGH RISK'}
                       </span>
                     </div>
-                    <span className="font-mono text-[10px] text-white font-medium">
+                    <span className="font-mono text-[11px] text-white font-bold">
                       {file ? `${failCount} Violation${failCount !== 1 ? 's' : ''} detected` : 'Upload drawing'}
                     </span>
                   </div>
                 </div>
 
                 {/* Footer Code Indicator */}
-                <div className="flex items-center justify-between pt-1 font-mono text-[11px] text-[#8c999c] z-10">
-                  <span className="flex items-center gap-1.5 text-white font-bold">
-                    <Cpu size={13} className="text-[#f26a3d]" />
+                <div className="flex items-center justify-between pt-1 font-mono text-xs text-[#8c999c] z-10 border-t border-white/5">
+                  <span className="flex items-center gap-1.5 text-white font-extrabold">
+                    <Cpu size={14} className="text-[#f26a3d]" />
                     {activeJurisdiction.label}
                   </span>
-                  <span className="text-[#81b7c2] font-bold">{analysis.ruleResults.length} Statutory Rules</span>
+                  <span className="text-[#81b7c2] font-extrabold">{analysis.ruleResults.length} Statutory Rules Evaluated</span>
                 </div>
               </div>
 
@@ -1148,42 +1148,7 @@ function App() {
                   </div>
                 )}
               </div>
-
-              {/* CURRENT STATUS / Score Card */}
-              <div className="card-prudence p-4 mt-auto flex flex-col gap-4">
-                <span className="font-mono text-[10px] font-bold text-[#8c999c] uppercase tracking-wider">
-                  STATUTORY COMPLIANCE SCORE
-                </span>
-
-                <div className="flex items-center gap-4">
-                  {/* Radial score ring */}
-                  <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-[#f26a3d] bg-[#08090a]">
-                    <span className="font-space text-xl font-bold text-[#f4f0e8]">{analysis.score}%</span>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <span className="font-mono text-[10px] text-[#8c999c] uppercase">RISK LEVEL</span>
-                    <span className="font-sans text-base font-bold text-[#f4f0e8]">{analysis.risk}</span>
-                    <span className="font-mono text-[10px] text-[#8c999c] mt-1 uppercase">CODE</span>
-                    <span className="font-mono text-xs font-semibold text-[#f26a3d]">{analysis.jurisdiction}</span>
-                  </div>
-                </div>
-
-                {/* Coverage bar */}
-                <div className="flex flex-col gap-1 border-t border-[rgba(255,255,255,0.08)] pt-3">
-                  <div className="flex justify-between font-mono text-[10px] text-[#8c999c]">
-                    <span>Coverage</span>
-                    <span>{analysis.coverage}%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-[#151a1c] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#f26a3d] rounded-full transition-all duration-500"
-                      style={{ width: `${analysis.coverage}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </aside>
+</aside>
           </main>
 
           {/* Floating Action Button for AI Chat */}
