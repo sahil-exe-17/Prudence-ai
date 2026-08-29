@@ -1,3 +1,4 @@
+import MorphText from './components/MorphText';
 import GenerateButton from './components/GenerateButton';
 import {
   ArrowRight,
@@ -1187,9 +1188,19 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
         </div>
 
         {/* Clean 1-Color Space Grotesk Headline */}
-        <h1 className="font-space text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-[#f4f0e8] leading-[1.08] max-w-4xl relative z-10">
-          Catch Building Code Violations Before Breaking Ground.
-        </h1>
+        <div className="relative z-10 max-w-5xl my-2">
+          <MorphText
+            words={[
+              "CATCH CODE VIOLATIONS",
+              "AUDIT BBMP & NBC LAWS",
+              "ZERO REJECTION SANCTIONS",
+              "INSTANT CAD COMPLIANCE"
+            ]}
+            interval={3200}
+            fontSize="clamp(2.2rem, 5.5vw, 4.5rem)"
+            subtext="BEFORE BREAKING GROUND ON SITE"
+          />
+        </div>
 
         {/* Simple, Attractive Sentence Subtitle */}
         <p className="mt-6 font-sans text-base sm:text-lg text-[#8c999c] max-w-2xl leading-relaxed relative z-10 backdrop-blur-xs">
