@@ -1349,17 +1349,18 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
 // AESTHETIC HIGH-TECH MARKDOWN TABLE, WORKFLOW & TEXT PARSER
 // AESTHETIC HIGH-TECH MARKDOWN TABLE, WORKFLOW & TEXT PARSER
+// AESTHETIC HIGH-TECH MARKDOWN TABLE, WORKFLOW & TEXT PARSER
 function FormattedMarkdownText({ content }: { content: string }) {
   if (!content) return null;
 
   const parseWorkflowSteps = (text: string) => {
-    // Split by step markers: [ Step 1 ], STEP 01, Step 1, 1ï¸âƒ£, etc.
+    // Split by step markers: [ Step 1 ], STEP 01, Step 1, 1ï¸âƒ£, 1. Step, etc.
     const stepBlocks = text
-      .split(/(?=\[\s*Step\s*\d+|STEP\s*\d+|Step\s*\d+|^\s*\d+[\uFE0F\u20E3]?\s*[\-\.\)]|\bStep\s+\d+)/im)
+      .split(/(?=\[\s*Step\s*\d+|STEP\s*\d+|Step\s*\d+|^\s*\d+[\uFE0F\u20E3]?\s*[\-\.\)]|\bStep\s+\d+|\bSTEP\s+\d+|\bStep\s*:\s*|\b\d+ï¸âƒ£)/im)
       .map((s) => s.trim())
       .filter((s) => s.length > 0 && !/^[\s|vâž”\->=]+$/.test(s));
 
-    if (stepBlocks.length < 1) return null;
+    if (stepBlocks.length < 2) return null;
 
     const parsedSteps: Array<{ stepNum: string; title: string; description: string }> = [];
 
@@ -1388,7 +1389,7 @@ function FormattedMarkdownText({ content }: { content: string }) {
       }
     });
 
-    return parsedSteps.length > 0 ? parsedSteps : null;
+    return parsedSteps.length >= 2 ? parsedSteps : null;
   };
 
   const parseMarkdownBlocks = (text: string) => {
@@ -1410,7 +1411,13 @@ function FormattedMarkdownText({ content }: { content: string }) {
 
     const flushList = () => {
       if (currentListItems.length > 0) {
-        blocks.push({ type: 'list', content: [...currentListItems] });
+        const listText = currentListItems.join('\n');
+        const steps = parseWorkflowSteps(listText);
+        if (steps && steps.length >= 2) {
+          blocks.push({ type: 'workflow', content: { steps, raw: listText } });
+        } else {
+          blocks.push({ type: 'list', content: [...currentListItems] });
+        }
         currentListItems = [];
       }
     };
@@ -1516,133 +1523,169 @@ function FormattedMarkdownText({ content }: { content: string }) {
     });
   };
 
+  // First check if the raw content contains unformatted workflow step blocks (e.g. STEP 01 ... STEP 02)
+  const directSteps = !content.includes('```') ? parseWorkflowSteps(content) : null;
   const blocks = parseMarkdownBlocks(content);
 
   return (
     <div className="space-y-3 text-xs text-[#f4f0e8] leading-relaxed">
-      {blocks.map((block, idx) => {
-        if (block.type === 'workflow') {
-          const { steps, raw } = block.content;
-          if (steps && steps.length > 0) {
-            return (
-              <div key={idx} className="my-4 p-4 rounded-xl border border-[#f26a3d]/35 bg-[#08090a] shadow-2xl space-y-3">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping" />
-                    VISUAL WORKFLOW & ACTION PLAN
-                  </span>
-                  <span className="text-[#8c999c] font-mono">{steps.length} STAGES</span>
-                </div>
+      {directSteps && directSteps.length >= 2 ? (
+        <div className="my-4 p-4 rounded-xl border border-[#f26a3d]/35 bg-[#08090a] shadow-2xl space-y-3">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping" />
+              VISUAL WORKFLOW & ACTION PLAN
+            </span>
+            <span className="text-[#8c999c] font-mono">{directSteps.length} STAGES</span>
+          </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  {steps.map((step: any, sIdx: number) => (
-                    <div
-                      key={sIdx}
-                      className="group relative flex flex-col gap-1.5 p-3.5 rounded-lg border border-white/10 bg-[#111416] hover:border-[#f26a3d]/60 hover:bg-[#151a1c] transition-all shadow-md"
-                    >
-                      <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#f26a3d]">
-                        <span>STEP {step.stepNum}</span>
-                        <ArrowRight size={12} className="text-[#81b7c2] group-hover:translate-x-1 transition-transform" />
-                      </div>
-                      <div className="font-space text-xs font-bold text-[#f4f0e8] leading-tight">
-                        {renderInlineFormatting(step.title)}
-                      </div>
-                      {step.description && (
-                        <div className="font-sans text-[11px] text-[#8c999c] leading-relaxed pt-1 border-t border-white/5">
-                          {renderInlineFormatting(step.description)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {directSteps.map((step: any, sIdx: number) => (
+              <div
+                key={sIdx}
+                className="group relative flex flex-col gap-1.5 p-3.5 rounded-lg border border-white/10 bg-[#111416] hover:border-[#f26a3d]/60 hover:bg-[#151a1c] transition-all shadow-md"
+              >
+                <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#f26a3d]">
+                  <span>STEP {step.stepNum}</span>
+                  <ArrowRight size={12} className="text-[#81b7c2] group-hover:translate-x-1 transition-transform" />
                 </div>
+                <div className="font-space text-xs font-bold text-[#f4f0e8] leading-tight">
+                  {renderInlineFormatting(step.title)}
+                </div>
+                {step.description && (
+                  <div className="font-sans text-[11px] text-[#8c999c] leading-relaxed pt-1 border-t border-white/5">
+                    {renderInlineFormatting(step.description)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        blocks.map((block, idx) => {
+          if (block.type === 'workflow') {
+            const { steps, raw } = block.content;
+            if (steps && steps.length > 0) {
+              return (
+                <div key={idx} className="my-4 p-4 rounded-xl border border-[#f26a3d]/35 bg-[#08090a] shadow-2xl space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping" />
+                      VISUAL WORKFLOW & ACTION PLAN
+                    </span>
+                    <span className="text-[#8c999c] font-mono">{steps.length} STAGES</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {steps.map((step: any, sIdx: number) => (
+                      <div
+                        key={sIdx}
+                        className="group relative flex flex-col gap-1.5 p-3.5 rounded-lg border border-white/10 bg-[#111416] hover:border-[#f26a3d]/60 hover:bg-[#151a1c] transition-all shadow-md"
+                      >
+                        <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#f26a3d]">
+                          <span>STEP {step.stepNum}</span>
+                          <ArrowRight size={12} className="text-[#81b7c2] group-hover:translate-x-1 transition-transform" />
+                        </div>
+                        <div className="font-space text-xs font-bold text-[#f4f0e8] leading-tight">
+                          {renderInlineFormatting(step.title)}
+                        </div>
+                        {step.description && (
+                          <div className="font-sans text-[11px] text-[#8c999c] leading-relaxed pt-1 border-t border-white/5">
+                            {renderInlineFormatting(step.description)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
+                  <span>WORKFLOW & ACTION PLAN</span>
+                  <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
+                </div>
+                <pre className="whitespace-pre overflow-x-auto leading-relaxed">{raw}</pre>
               </div>
             );
           }
 
-          return (
-            <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
-                <span>WORKFLOW & ACTION PLAN</span>
-                <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
+          if (block.type === 'code' && block.content) {
+            const { lang, code } = block.content;
+            return (
+              <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
+                  <span>{lang.toUpperCase() || 'SPECIFICATION'}</span>
+                  <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
+                </div>
+                <pre className="whitespace-pre overflow-x-auto leading-relaxed">{code}</pre>
               </div>
-              <pre className="whitespace-pre overflow-x-auto leading-relaxed">{raw}</pre>
-            </div>
-          );
-        }
+            );
+          }
 
-        if (block.type === 'code' && block.content) {
-          const { lang, code } = block.content;
-          return (
-            <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
-                <span>{lang.toUpperCase() || 'SPECIFICATION'}</span>
-                <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
-              </div>
-              <pre className="whitespace-pre overflow-x-auto leading-relaxed">{code}</pre>
-            </div>
-          );
-        }
-
-        if (block.type === 'table' && block.content) {
-          const { headers, rows } = block.content;
-          return (
-            <div key={idx} className="my-3 overflow-x-auto rounded-lg border border-white/15 bg-[#08090a] shadow-2xl">
-              <table className="w-full min-w-full text-left font-sans text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-white/15 bg-[#151a1c]">
-                    {headers.map((h: string, hIdx: number) => (
-                      <th
-                        key={hIdx}
-                        className="px-3.5 py-2.5 font-mono text-[11px] font-bold text-[#f26a3d] tracking-wide uppercase border-r border-white/10 last:border-r-0"
-                      >
-                        {renderInlineFormatting(h)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
-                  {rows.map((row: string[], rIdx: number) => (
-                    <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-[#08090a]' : 'bg-[#111416]'}>
-                      {row.map((cell: string, cIdx: number) => (
-                        <td key={cIdx} className="px-3.5 py-2 text-[#f4f0e8] border-r border-white/5 last:border-r-0 align-top">
-                          {renderInlineFormatting(cell)}
-                        </td>
+          if (block.type === 'table' && block.content) {
+            const { headers, rows } = block.content;
+            return (
+              <div key={idx} className="my-3 overflow-x-auto rounded-lg border border-white/15 bg-[#08090a] shadow-2xl">
+                <table className="w-full min-w-full text-left font-sans text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/15 bg-[#151a1c]">
+                      {headers.map((h: string, hIdx: number) => (
+                        <th
+                          key={hIdx}
+                          className="px-3.5 py-2.5 font-mono text-[11px] font-bold text-[#f26a3d] tracking-wide uppercase border-r border-white/10 last:border-r-0"
+                        >
+                          {renderInlineFormatting(h)}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        }
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {rows.map((row: string[], rIdx: number) => (
+                      <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-[#08090a]' : 'bg-[#111416]'}>
+                        {row.map((cell: string, cIdx: number) => (
+                          <td key={cIdx} className="px-3.5 py-2 text-[#f4f0e8] border-r border-white/5 last:border-r-0 align-top">
+                            {renderInlineFormatting(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
 
-        if (block.type === 'header') {
+          if (block.type === 'header') {
+            return (
+              <h4 key={idx} className="font-space font-bold text-sm text-[#f26a3d] mt-3 mb-1">
+                {renderInlineFormatting(block.content.text)}
+              </h4>
+            );
+          }
+
+          if (block.type === 'list') {
+            return (
+              <ul key={idx} className="space-y-1 my-1.5 pl-1">
+                {block.content.map((item: string, itemIdx: number) => (
+                  <li key={itemIdx} className="flex items-start gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f26a3d] mt-1.5 shrink-0" />
+                    <span>{renderInlineFormatting(item)}</span>
+                  </li>
+                ))}
+              </ul>
+            );
+          }
+
           return (
-            <h4 key={idx} className="font-space font-bold text-sm text-[#f26a3d] mt-3 mb-1">
-              {renderInlineFormatting(block.content.text)}
-            </h4>
+            <p key={idx} className="text-[#f4f0e8]/90">
+              {renderInlineFormatting(block.content)}
+            </p>
           );
-        }
-
-        if (block.type === 'list') {
-          return (
-            <ul key={idx} className="space-y-1 my-1.5 pl-1">
-              {block.content.map((item: string, itemIdx: number) => (
-                <li key={itemIdx} className="flex items-start gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f26a3d] mt-1.5 shrink-0" />
-                  <span>{renderInlineFormatting(item)}</span>
-                </li>
-              ))}
-            </ul>
-          );
-        }
-
-        return (
-          <p key={idx} className="text-[#f4f0e8]/90">
-            {renderInlineFormatting(block.content)}
-          </p>
-        );
-      })}
+        })
+      )}
     </div>
   );
 }
