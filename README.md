@@ -22,6 +22,23 @@
 
 ---
 
+## 📚 Repository Documentation Index (`docs/` Folder)
+
+PRUDENCE AI includes competition-grade system documentation tailored for **SIH 2026 Open Innovation**:
+
+| Document | Title / Description | Direct Link |
+| :--- | :--- | :--- |
+| **01 PRD** | **Project Requirements Document** — Executive summary, SIH 2026 problem analysis, functional & non-functional requirements. | [01_PRD_Project_Requirements_Document.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/01_PRD_Project_Requirements_Document.md) |
+| **02 Tech Stack** | **Technical Stack & Specification** — React 19, Vite 7, Three.js, Python server, Vercel Serverless, Groq LLM architecture. | [02_Tech_Stack.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/02_Tech_Stack.md) |
+| **03 System Architecture** | **System Architecture & Flow** — Mermaid diagrams, viewport 100% auto-fit math, pin coordinate transformation formulas. | [03_System_Architecture.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/03_System_Architecture.md) |
+| **04 RBAC Matrix** | **RBAC Roles & Governance** — Access matrix for Municipal Officers (BBMP/MCGM), Architects, Structural Engineers, RERA. | [04_RBAC_Roles_and_Permissions.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/04_RBAC_Roles_and_Permissions.md) |
+| **05 Network Plan** | **Connectivity & Network Architecture** — Hybrid offline/online deployment, Vercel edge routes, local Python server specs. | [05_Connectivity_and_Network_Plan.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/05_Connectivity_and_Network_Plan.md) |
+| **06 Statutory Knowledge**| **Indian Building Bylaws & Domain Knowledge** — DCR setback formulas, NBC 2016 Part 4 fire rules, RERA 2016 tolerances. | [06_Building_Bylaws_Statutory_Domain_Knowledge.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/06_Building_Bylaws_Statutory_Domain_Knowledge.md) |
+| **07 API & Datasets** | **API Specifications & Test Datasets** — REST API endpoints, JSON schemas, Green Heights benchmark test files. | [07_API_Integration_and_Datasets.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/07_API_Integration_and_Datasets.md) |
+| **08 Winning Strategy**| **Prototype Guide & SIH 2026 Strategy** — Step-by-step hackathon presentation script, 3-minute pitch roadmap, feature matrix. | [08_Prototype_Guide_and_Winning_Strategy.md](file:///c:/Users/Sahil%20Lale/Downloads/PRUDENCE-main/PRUDENCE-main/docs/08_Prototype_Guide_and_Winning_Strategy.md) |
+
+---
+
 ## 🎯 Problem Statement & Background
 
 In India’s rapidly growing urban landscape, **architectural building plan approval** by Municipal Corporations and Urban Local Bodies (ULBs) is a major bottleneck:
