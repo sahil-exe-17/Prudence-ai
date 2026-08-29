@@ -607,8 +607,8 @@ function App() {
             <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#08090a]/90 px-6 backdrop-blur-md">
               {/* Brand */}
               <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigate('landing')}>
-                <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-xl border border-[#f26a3d]/40 bg-[#111416] p-1.5 shadow-lg shadow-[#f26a3d]/15 logo-glow-box transition-all duration-300 group-hover:scale-105 group-hover:border-[#f26a3d] group-hover:shadow-[#f26a3d]/35">
-                  <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
+                <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl border-2 border-[#f26a3d]/60 bg-[#111416] p-0.5 shadow-xl shadow-[#f26a3d]/30 logo-glow-box overflow-hidden transition-all duration-300 group-hover:scale-110 group-hover:border-[#f26a3d]">
+                  <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-cover rounded-lg scale-105" />
                 </div>
                 <span className="font-space text-lg md:text-xl font-extrabold tracking-tight transition group-hover:scale-105"><span className="text-white">PRUDENCE</span> <span className="text-[#f26a3d]">AI</span></span>
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c]">
@@ -1194,8 +1194,8 @@ function LandingPage({ onLaunch, onUpload, theme, setTheme }: { onLaunch: () => 
       <header className="sticky top-4 z-50 max-w-6xl mx-auto w-[94%] my-2 rounded-full border border-white/15 bg-[#08090a]/85 px-5 py-2.5 backdrop-blur-2xl shadow-2xl shadow-black/80 hover:border-[#f26a3d]/50 transition-all duration-500 flex items-center justify-between">
         {/* Brand with 3D Tilt Hover */}
         <div className="flex items-center gap-3 cursor-pointer group" onClick={onLaunch}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#f26a3d]/40 bg-[#111416] p-1.5 shadow-lg shadow-[#f26a3d]/20 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 group-hover:border-[#f26a3d] group-hover:shadow-[#f26a3d]/50 logo-glow-box">
-            <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain drop-shadow" />
+          <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl border-2 border-[#f26a3d]/60 bg-[#111416] p-0.5 shadow-xl shadow-[#f26a3d]/35 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 group-hover:border-[#f26a3d] group-hover:shadow-[#f26a3d]/60 logo-glow-box overflow-hidden">
+            <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-cover rounded-lg scale-105" />
           </div>
           <div className="flex flex-col leading-none">
             <span className="font-space text-lg font-extrabold tracking-tight transition-transform group-hover:scale-105">
