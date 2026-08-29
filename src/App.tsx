@@ -1347,15 +1347,18 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
   );
 }
 
-// AESTHETIC HIGH-TECH MARKDOWN TABLE & TEXT PARSER
+// AESTHETIC HIGH-TECH MARKDOWN TABLE, WORKFLOW & TEXT PARSER
 function FormattedMarkdownText({ content }: { content: string }) {
   if (!content) return null;
 
   const parseMarkdownBlocks = (text: string) => {
     const lines = text.split('\n');
-    const blocks: Array<{ type: 'table' | 'header' | 'list' | 'text'; content: any }> = [];
+    const blocks: Array<{ type: 'table' | 'header' | 'list' | 'code' | 'text'; content: any }> = [];
     let currentTableLines: string[] = [];
     let currentListItems: string[] = [];
+    let inCodeBlock = false;
+    let codeLines: string[] = [];
+    let codeLang = '';
 
     const flushTable = () => {
       if (currentTableLines.length > 0) {
@@ -1374,6 +1377,30 @@ function FormattedMarkdownText({ content }: { content: string }) {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+
+      // Code Block / Workflow Fence Detection ```
+      if (line.trim().startsWith('```')) {
+        if (inCodeBlock) {
+          blocks.push({
+            type: 'code',
+            content: { lang: codeLang || 'workflow', code: codeLines.join('\n') },
+          });
+          inCodeBlock = false;
+          codeLines = [];
+          codeLang = '';
+        } else {
+          flushTable();
+          flushList();
+          inCodeBlock = true;
+          codeLang = line.trim().replace(/^```/, '').trim();
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        codeLines.push(line);
+        continue;
+      }
 
       // Detect Table Line
       if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
@@ -1443,6 +1470,20 @@ function FormattedMarkdownText({ content }: { content: string }) {
   return (
     <div className="space-y-2.5 text-xs text-[#f4f0e8] leading-relaxed">
       {blocks.map((block, idx) => {
+        if (block.type === 'code' && block.content) {
+          const { lang, code } = block.content;
+          const isWorkflow = lang === 'mermaid' || lang === 'workflow' || code.includes('-->') || code.includes('->') || code.includes('➔');
+          return (
+            <div key={idx} className="my-3 rounded-lg border border-[#f26a3d]/30 bg-[#08090a] p-3.5 font-mono text-[11px] text-[#81b7c2] shadow-xl overflow-x-auto">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2 text-[10px] font-bold text-[#f26a3d] uppercase tracking-wider">
+                <span>{isWorkflow ? '⚡ WORKFLOW & PROCESS DIAGRAM' : `SPECIFICATION / ${lang.toUpperCase() || 'CODE'}`}</span>
+                <span className="text-[#8c999c]">PRUDENCE ENGINE</span>
+              </div>
+              <pre className="whitespace-pre overflow-x-auto leading-relaxed">{code}</pre>
+            </div>
+          );
+        }
+
         if (block.type === 'table' && block.content) {
           const { headers, rows } = block.content;
           return (

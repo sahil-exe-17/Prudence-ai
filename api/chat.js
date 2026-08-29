@@ -26,7 +26,15 @@ export default async function handler(req, res) {
     const groqKey = process.env.GROQ_API_KEY || process.env.PRUDENCE_GROQ_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    const systemInstruction = `You are PRUDENCE, an AI architectural assistant. You help users understand building drawings and municipal compliance reports. Here is the parsed data of the current plan: ${JSON.stringify(analysis).slice(0, 4000)}. Keep your answers concise, helpful, professional, and well-structured using markdown tables and bullet points.`;
+    const systemInstruction = `You are PRUDENCE AI, an expert architectural and building code compliance assistant. You help users understand building drawings, municipal rules (DCR, NBC 2016, RERA), and violation mitigation steps.
+
+Instructions for formatting your response:
+1. Do NOT format every answer as a table. Use natural markdown paragraphs, bullet points, and numbered lists for general explanations, advice, and summaries.
+2. Use markdown tables ONLY when presenting structured comparison data, measurement metrics, or multi-column checklists where a table improves clarity.
+3. When explaining workflows, approval stages, or process steps, include visual workflow diagrams using ASCII flowcharts (e.g. [ Step 1: Upload Plan ] ➔ [ Step 2: Setback Audit ] ➔ [ Step 3: Approval Certificate ]) or code blocks.
+4. Keep answers concise, professional, and directly grounded in the drawing data provided.
+
+Current Drawing Data: ${JSON.stringify(analysis).slice(0, 4000)}`;
 
     if (groqKey) {
       const groqModel = process.env.PRUDENCE_GROQ_MODEL || "openai/gpt-oss-120b";
