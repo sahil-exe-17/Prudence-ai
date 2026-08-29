@@ -1143,35 +1143,50 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
   return (
     <div className="relative h-full bg-ambient-mesh text-[#f4f0e8] flex flex-col font-sans overflow-x-hidden overflow-y-auto">
-      {/* Sleek Vercel Header Navbar */}
-      <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-white/10 bg-[#08090a]/90 px-6 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 md:h-12 md:w-12 items-center justify-center rounded-xl border border-[#f26a3d]/50 bg-[#111416] p-2 shadow-xl shadow-[#f26a3d]/20 logo-glow-box transition-all duration-300 hover:scale-105 hover:border-[#f26a3d] hover:shadow-[#f26a3d]/40">
-            <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain" />
+      {/* CRAZY AESTHETIC FLOATING GLASS CAPSULE NAVBAR */}
+      <header className="sticky top-4 z-50 max-w-6xl mx-auto w-[94%] my-2 rounded-full border border-white/15 bg-[#08090a]/85 px-5 py-2.5 backdrop-blur-2xl shadow-2xl shadow-black/80 hover:border-[#f26a3d]/50 transition-all duration-500 flex items-center justify-between">
+        {/* Brand with 3D Tilt Hover */}
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={onLaunch}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#f26a3d]/40 bg-[#111416] p-1.5 shadow-lg shadow-[#f26a3d]/20 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 group-hover:border-[#f26a3d] group-hover:shadow-[#f26a3d]/50 logo-glow-box">
+            <img src="/prudence-logo.png" alt="PRUDENCE" className="h-full w-full object-contain drop-shadow" />
           </div>
-          <span className="font-space text-lg font-bold tracking-tight"><span className="text-white">PRUDENCE</span> <span className="text-[#f26a3d]">AI</span></span>
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#8c999c] bg-white/5 px-2 py-0.5 rounded border border-white/10">
-            BBMP 2026 AUDIT ENGINE
-          </span>
+          <div className="flex flex-col leading-none">
+            <span className="font-space text-lg font-extrabold tracking-tight transition-transform group-hover:scale-105">
+              <span className="text-white">PRUDENCE</span> <span className="text-[#f26a3d] drop-shadow-[0_0_8px_rgba(242,106,61,0.6)]">AI</span>
+            </span>
+            <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#8c999c] mt-0.5">
+              BBMP 2026 AUDIT ENGINE
+            </span>
+          </div>
         </div>
 
-        <nav className="hidden md:flex items-center gap-8 font-sans text-xs font-medium text-[#8c999c]">
-          <a href="#hero" className="hover:text-[#f4f0e8] transition">Product</a>
-          <a href="#showcase" className="hover:text-[#f4f0e8] transition">Interactive Demo</a>
-          <a href="#workflow" className="hover:text-[#f4f0e8] transition">Workflow</a>
-          <a href="#bylaws" className="hover:text-[#f4f0e8] transition">Supported Bylaws</a>
+        {/* Floating Link Pills */}
+        <nav className="hidden lg:flex items-center gap-1.5 p-1 rounded-full border border-white/10 bg-[#111416]/80 font-mono text-xs font-semibold text-[#8c999c]">
+          <a href="#hero" className="px-3.5 py-1.5 rounded-full transition-all duration-300 hover:bg-[#f26a3d]/15 hover:text-[#f26a3d] hover:scale-105">
+            #Product
+          </a>
+          <a href="#showcase" className="px-3.5 py-1.5 rounded-full transition-all duration-300 hover:bg-[#f26a3d]/15 hover:text-[#f26a3d] hover:scale-105">
+            #Interactive Demo
+          </a>
+          <a href="#bylaws" className="px-3.5 py-1.5 rounded-full transition-all duration-300 hover:bg-[#f26a3d]/15 hover:text-[#f26a3d] hover:scale-105">
+            #Bylaw Radar
+          </a>
         </nav>
 
+        {/* Right Status Badge & CTA Button */}
         <div className="flex items-center gap-3">
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#f26a3d]/30 bg-[#f26a3d]/10 font-mono text-[10px] font-bold text-[#f26a3d] animate-pulse">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#f26a3d] animate-ping" />
+            CAD WORK IN PROGRESS
+          </span>
+
           <button
             type="button"
             onClick={onLaunch}
-            className="btn-crazy-glow group text-xs h-9 px-4 font-semibold gap-2"
+            className="relative group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#f26a3d] to-[#ff8555] font-space text-xs font-bold text-[#08090a] shadow-lg shadow-[#f26a3d]/25 hover:shadow-[#f26a3d]/50 hover:scale-105 transition-all duration-300 active:scale-95 cursor-pointer"
           >
-            <span>Scan Blueprint Now</span>
-            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-white/30 bg-black/30 text-white transition-transform duration-300 group-hover:translate-x-0.5">
-              <ArrowRight size={11} />
-            </div>
+            <span>Launch Workspace</span>
+            <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </header>
