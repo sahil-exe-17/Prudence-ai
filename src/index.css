@@ -659,3 +659,52 @@
 .logo-glow-box {
   animation: glowPulseBorder 4s ease-in-out infinite;
 }
+
+
+/* ==========================================================================
+   AESTHETIC ARCHITECTURAL LIGHT THEME OVERRIDES (.theme-light)
+   ========================================================================== */
+.theme-light {
+  --bg-base: #f9f8f5;
+  --bg-card: #ffffff;
+  --bg-surface: #f0eee8;
+  --accent-orange: #e05326;
+  --accent-blue: #247385;
+  --accent-purple: #6a53cb;
+  --text-primary: #15181a;
+  --text-muted: #5e6f75;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.18);
+  color-scheme: light;
+}
+
+.theme-light,
+.theme-light body,
+.theme-light #root {
+  background-color: #f9f8f5 !important;
+  color: #15181a !important;
+}
+
+.theme-light .bg-ambient-mesh {
+  background-color: #f9f8f5 !important;
+  background-image:
+    radial-gradient(circle at 50% 15%, rgba(36, 115, 133, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 80% 50%, rgba(224, 83, 38, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, rgba(106, 83, 203, 0.06) 0%, transparent 45%),
+    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px) !important;
+}
+
+.theme-light .card-prudence {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+}
+
+.theme-light ::-webkit-scrollbar-track {
+  background: #f9f8f5 !important;
+}
+
+.theme-light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18) !important;
+}

@@ -28,6 +28,8 @@ import {
   Send,
   Shield,
   Sparkles,
+  Sun,
+  Moon,
   Sliders,
   Trash2,
   Upload,
@@ -298,6 +300,7 @@ function App() {
       }, 40);
     }, 180);
   };
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [analysis, setAnalysis] = useState<Analysis>(emptyAnalysis);
@@ -1138,7 +1141,7 @@ function App() {
 }
 
 /* SLEEK VERCEL/LINEAR STYLE HUMAN SAAS LANDING PAGE COMPONENT */
-function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: () => void }) {
+function LandingPage({ onLaunch, onUpload, theme, setTheme }: { onLaunch: () => void; onUpload: () => void; theme: "dark" | "light"; setTheme: React.Dispatch<React.SetStateAction<"dark" | "light">> }) {
   const [activeTab, setActiveTab] = useState<'v1' | 'v2' | 'v3'>('v1');
 
   return (
@@ -1175,6 +1178,15 @@ function LandingPage({ onLaunch, onUpload }: { onLaunch: () => void; onUpload: (
 
         {/* Right Status Badge & CTA Button */}
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+            className="p-2 rounded-full border border-white/10 bg-[#111416] text-[#f26a3d] hover:scale-110 hover:border-[#f26a3d] transition-all shadow-md cursor-pointer"
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Theme`}
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+
           <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#f26a3d]/30 bg-[#f26a3d]/10 font-mono text-[10px] font-bold text-[#f26a3d] animate-pulse">
             <span className="h-1.5 w-1.5 rounded-full bg-[#f26a3d] animate-ping" />
             CAD WORK IN PROGRESS
