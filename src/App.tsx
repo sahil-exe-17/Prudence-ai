@@ -64,6 +64,15 @@ import {
 } from './lib/complianceEngine';
 import type { PackId, PlanFacts } from './lib/complianceKnowledgeBase';
 import { factsFromGeometry, factsFromText, factsFromVision } from './lib/factExtraction';
+import { readDrawingLocally, type DrawingRead, type ReadSource } from './lib/localReader';
+
+/** How each on-device read strategy is described in the evidence ledger. */
+const LOCAL_READ_LABELS: Record<ReadSource, string> = {
+  'pdf-text': 'On-device PDF text layer',
+  'pdf-ocr': 'On-device OCR (scanned PDF)',
+  'image-ocr': 'On-device OCR (image)',
+  none: 'Local deterministic engine',
+};
 import {
   SAMPLE_PROJECT_FACTS,
   SAMPLE_PROJECT_LABEL,
@@ -178,6 +187,9 @@ function App() {
   const [analysis, setAnalysis] = useState<Analysis>(emptyAnalysis);
   const [state, setState] = useState<AnalysisState>('idle');
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
+  /** Live progress of the on-device reader, null when idle. */
+  const [scanStage, setScanStage] = useState<{ label: string; fraction: number } | null>(null);
+  const [drawingRead, setDrawingRead] = useState<DrawingRead | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [is3D, setIs3D] = useState(false);
 
@@ -510,6 +522,8 @@ function App() {
       setFileData('');
       setPlanModel(null);
       setPlanStatus('idle');
+      setScanStage(null);
+      setDrawingRead(null);
       return;
     }
 
@@ -549,12 +563,17 @@ function App() {
         }
       };
 
-      // Facts and geometry are independent reads of the same sheet.
-      const [factsResponse, geometryResponse] = await Promise.all([
+      // Facts, geometry and the on-device read are independent reads of the
+      // same sheet, so they run concurrently.
+      const [factsResponse, geometryResponse, localRead] = await Promise.all([
         post('/api/extract-facts', request),
         post('/api/extract-plan', { ...request, hints: {} }),
+        readDrawingLocally(file, url, (stage, fraction) => {
+          if (!isCancelled) setScanStage({ label: stage, fraction });
+        }),
       ]);
       if (isCancelled) return;
+      setScanStage(null);
 
       /* ---- 3D model ---- */
       const seed = `${file.name}:${file.size}`;
@@ -566,23 +585,43 @@ function App() {
       const model = visionModel ?? synthesizePlanModel(seed);
 
       /* ---- Facts, weakest source first ---- */
-      let facts: PlanFacts = factsFromText(factsResponse?.sheetText || '');
+      // The server's own text read wins when it has one (a real PDF text layer
+      // beats OCR); otherwise the on-device read supplies the corpus.
+      const serverText = String(factsResponse?.sheetText || '');
+      const sheetText = serverText.trim().length >= localRead.characters ? serverText : localRead.text;
+
+      let facts: PlanFacts = factsFromText(sheetText);
       // Only a genuine vision trace may feed statutory facts. Synthesised
       // geometry is a visual aid, not evidence about this building.
       if (visionModel) facts = mergeFacts(facts, factsFromGeometry(visionModel));
       if (factsResponse?.facts) facts = mergeFacts(facts, factsFromVision(factsResponse.facts));
 
+      const usedLocalRead = sheetText === localRead.text && localRead.characters > 0;
       const notes: string[] = [];
+      if (localRead.note) notes.push(localRead.note);
       if (factsResponse?.error) notes.push(factsResponse.error);
-      if (factsResponse?.textExtractionNote) notes.push(factsResponse.textExtractionNote);
+      if (factsResponse?.textExtractionNote && !usedLocalRead) {
+        notes.push(factsResponse.textExtractionNote);
+      }
       if (!factsResponse) {
-        notes.push('Fact extraction service unreachable — only locally derivable evidence was used.');
+        notes.push('Cloud fact extraction unreachable — the on-device reader was used instead.');
       }
 
+      // `facts: {}` comes back whenever the vision reader is unconfigured, and
+      // an empty object is truthy — so count the keys, or the ledger credits
+      // the vision extractor for work the on-device reader actually did.
+      const visionFactCount = Object.keys(factsResponse?.facts || {}).length;
+      const provider = visionFactCount > 0
+        ? factsResponse.provider || 'Vision extractor'
+        : usedLocalRead
+        ? LOCAL_READ_LABELS[localRead.source]
+        : 'Local deterministic engine';
+
+      setDrawingRead(localRead);
       applyFacts(facts, {
         documentName: file.name,
         documentSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        provider: factsResponse?.provider || 'Local deterministic engine',
+        provider,
         notes,
       });
 
@@ -772,17 +811,35 @@ function App() {
                 </div>
               </div>
 
-              {/* CAD Work In Progress Status Banner */}
-              <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-lg border border-[#f26a3d]/30 bg-[#111416] font-mono text-xs text-[#81b7c2] shadow-sm">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping shrink-0" />
-                  <span className="font-bold text-[#f26a3d] uppercase tracking-wider">CAD WORK IN PROGRESS:</span>
-                  <span className="text-[#8c999c]">Live CAD engine, DWG / DXF vector parsing & interactive drawing tools under active integration.</span>
+              {/* Live reader progress, else the CAD status banner */}
+              {scanStage ? (
+                <div className="flex items-center gap-3 px-3.5 py-2 rounded-lg border border-[#81b7c2]/40 bg-[#111416] font-mono text-xs shadow-sm">
+                  <span className="h-2 w-2 rounded-full bg-[#81b7c2] animate-ping shrink-0" />
+                  <span className="font-bold text-[#81b7c2] uppercase tracking-wider shrink-0">
+                    {scanStage.label}
+                  </span>
+                  <div className="h-1 flex-1 rounded-full bg-[#08090a] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#81b7c2] transition-all duration-200"
+                      style={{ width: `${Math.round(scanStage.fraction * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[#81b7c2] font-bold w-9 text-right shrink-0">
+                    {Math.round(scanStage.fraction * 100)}%
+                  </span>
                 </div>
-                <span className="hidden sm:inline-block text-[10px] text-[#f26a3d] font-bold bg-[#f26a3d]/10 border border-[#f26a3d]/30 px-2 py-0.5 rounded shrink-0">
-                  v0.9 BETA
-                </span>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-lg border border-[#f26a3d]/30 bg-[#111416] font-mono text-xs text-[#81b7c2] shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#f26a3d] animate-ping shrink-0" />
+                    <span className="font-bold text-[#f26a3d] uppercase tracking-wider">CAD WORK IN PROGRESS:</span>
+                    <span className="text-[#8c999c]">Live CAD engine, DWG / DXF vector parsing & interactive drawing tools under active integration.</span>
+                  </div>
+                  <span className="hidden sm:inline-block text-[10px] text-[#f26a3d] font-bold bg-[#f26a3d]/10 border border-[#f26a3d]/30 px-2 py-0.5 rounded shrink-0">
+                    v0.9 BETA
+                  </span>
+                </div>
+              )}
 
               {/* Jurisdiction Bar & Rule Packs */}
               <div className="flex flex-wrap items-center justify-between gap-3 card-prudence p-2.5">
@@ -2327,6 +2384,102 @@ function UploadEmptyState({
   );
 }
 
+/**
+ * Violation pins laid over the drawing.
+ *
+ * Only *decided* rules are pinned. A rule we could not read is not a finding,
+ * and pinning all 24 of them buried the drawing under overlapping labels while
+ * making unread rules look identical to violations. Unread rules live in the
+ * evidence ledger instead.
+ *
+ * Labels are revealed on hover or selection rather than drawn permanently, so
+ * clustered pins stay legible.
+ */
+function RulePins({
+  rules,
+  currentPage,
+  selectedRuleId,
+  onSelectRule,
+}: {
+  rules: RuleResult[];
+  currentPage: number;
+  selectedRuleId: string;
+  onSelectRule: (rule: RuleResult) => void;
+}) {
+  const pinned = rules.filter((rule) => {
+    if (!rule.annotation) return false;
+    if ((rule.annotation.page || 1) !== currentPage) return false;
+    const status = String(rule.status || '').toLowerCase();
+    return status === 'pass' || status === 'fail';
+  });
+
+  if (!pinned.length) return null;
+
+  return (
+    <>
+      {pinned.map((rule) => {
+        const annotation = rule.annotation!;
+        const isSelected = selectedRuleId === rule.id;
+        const isPass = String(rule.status).toLowerCase() === 'pass';
+        const accent = isPass ? '#27c93f' : rule.severity === 'CRITICAL' ? '#ff4d3d' : '#f26a3d';
+
+        return (
+          <div
+            key={rule.id}
+            onClick={() => onSelectRule(rule)}
+            className={`group absolute cursor-pointer transition-transform duration-200 ${
+              isSelected ? 'z-40 scale-110' : 'z-30 hover:z-40 hover:scale-105'
+            }`}
+            style={{
+              left: `${annotation.x}%`,
+              top: `${annotation.y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="relative flex items-center justify-center">
+              {/* Only failures pulse — a passing check does not need attention. */}
+              {!isPass && (
+                <span
+                  className="absolute h-8 w-8 rounded-full animate-ping opacity-60"
+                  style={{ backgroundColor: accent }}
+                />
+              )}
+              <div
+                className="relative flex h-6 w-6 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-[10px] font-bold shadow-xl"
+                style={{
+                  borderColor: accent,
+                  color: accent,
+                  boxShadow: isSelected ? `0 0 0 4px ${accent}33` : undefined,
+                }}
+              >
+                {isPass ? '✓' : '!'}
+              </div>
+
+              <div
+                className={`pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 whitespace-nowrap rounded border bg-[#08090a]/95 px-2 py-1 font-mono text-[10px] text-[#f4f0e8] shadow-2xl transition-opacity duration-150 ${
+                  isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}
+                style={{ borderColor: accent }}
+              >
+                <span className="font-bold" style={{ color: accent }}>
+                  {rule.id}
+                </span>
+                <span className="mx-1.5">{rule.title}</span>
+                <span
+                  className="rounded px-1.5 py-0.5 font-bold text-[#08090a]"
+                  style={{ backgroundColor: accent }}
+                >
+                  {rule.current}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function DrawingPreview({
   file,
   previewUrl,
@@ -2360,75 +2513,13 @@ function DrawingPreview({
           className="max-h-[calc(100vh-230px)] w-auto max-w-full block border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a] shadow-2xl object-contain"
         />
 
-        {/* HIGH-PRECISION GLOWING POINTER PINS DIRECTLY ON DRAWING IMAGE BOUNDS */}
         {annotationsVisible && !is3D && (
-          <>
-            {analysis.ruleResults.map((rule) => {
-              if (!rule.annotation) return null;
-              const ann = rule.annotation;
-              const annPage = ann.page || 1;
-              if (annPage !== currentPage) return null;
-
-              const isSelected = selectedRuleId === rule.id;
-              const isPass = rule.status === 'Pass';
-
-              return (
-                <div
-                  key={rule.id}
-                  onClick={() => onSelectRule(rule)}
-                  className={`absolute cursor-pointer transition-all duration-200 z-30 group ${
-                    isSelected ? 'scale-110' : 'hover:scale-105'
-                  }`}
-                  style={{
-                    left: `${ann.x}%`,
-                    top: `${ann.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
-                  {/* Glowing Radar Beacon Target */}
-                  <div className="relative flex items-center justify-center">
-                    <span
-                      className={`absolute h-9 w-9 rounded-full animate-ping opacity-75 ${
-                        isPass ? 'bg-[#27c93f]' : rule.severity === 'CRITICAL' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
-                      }`}
-                    />
-                    <div
-                      className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-xs font-bold shadow-2xl ${
-                        isSelected
-                          ? isPass
-                            ? 'border-[#27c93f] text-[#27c93f] ring-4 ring-[#27c93f]/30'
-                            : 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
-                          : isPass
-                          ? 'border-[#27c93f] text-[#27c93f]'
-                          : 'border-[#81b7c2] text-[#f4f0e8]'
-                      }`}
-                    >
-                      {isPass ? '' : rule.id.split('-').pop()}
-                    </div>
-
-                    {/* Leader Line Callout Tag */}
-                    <div
-                      className={`absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto ${
-                        isPass ? 'border-[#27c93f]' : 'border-[#f26a3d]'
-                      }`}
-                    >
-                      <span className={`font-bold ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
-                        {rule.id}:
-                      </span>
-                      <span>{rule.title}</span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded font-bold ${
-                          isPass ? 'bg-[#27c93f] text-[#08090a]' : 'bg-[#f26a3d] text-[#08090a]'
-                        }`}
-                      >
-                        {rule.current}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
+          <RulePins
+            rules={analysis.ruleResults}
+            currentPage={currentPage}
+            selectedRuleId={selectedRuleId}
+            onSelectRule={onSelectRule}
+          />
         )}
       </div>
     );
@@ -2438,73 +2529,13 @@ function DrawingPreview({
     <div className="relative inline-block w-full h-full max-h-[620px]">
       <CadBlueprintGraphic filename={file.name} />
 
-      {/* HIGH-PRECISION POINTER PINS ON VECTOR SVG GRAPHIC */}
       {annotationsVisible && !is3D && (
-        <>
-          {analysis.ruleResults.map((rule) => {
-            if (!rule.annotation) return null;
-            const ann = rule.annotation;
-            const annPage = ann.page || 1;
-            if (annPage !== currentPage) return null;
-
-            const isSelected = selectedRuleId === rule.id;
-            const isPass = rule.status === 'Pass';
-
-            return (
-              <div
-                key={rule.id}
-                onClick={() => onSelectRule(rule)}
-                className={`absolute cursor-pointer transition-all duration-200 z-30 group ${
-                  isSelected ? 'scale-110' : 'hover:scale-105'
-                }`}
-                style={{
-                  left: `${ann.x}%`,
-                  top: `${ann.y}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <div className="relative flex items-center justify-center">
-                  <span
-                    className={`absolute h-9 w-9 rounded-full animate-ping opacity-75 ${
-                      isPass ? 'bg-[#27c93f]' : rule.severity === 'CRITICAL' ? 'bg-[#f26a3d]' : 'bg-[#81b7c2]'
-                    }`}
-                  />
-                  <div
-                    className={`relative flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#08090a] font-mono text-xs font-bold shadow-2xl ${
-                      isSelected
-                        ? isPass
-                          ? 'border-[#27c93f] text-[#27c93f] ring-4 ring-[#27c93f]/30'
-                          : 'border-[#f26a3d] text-[#f26a3d] ring-4 ring-[#f26a3d]/30'
-                        : isPass
-                        ? 'border-[#27c93f] text-[#27c93f]'
-                        : 'border-[#81b7c2] text-[#f4f0e8]'
-                    }`}
-                  >
-                    {isPass ? '' : rule.id.split('-').pop()}
-                  </div>
-
-                  <div
-                    className={`absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-[#08090a]/95 border px-2.5 py-1 font-mono text-[11px] text-[#f4f0e8] shadow-2xl flex items-center gap-2 pointer-events-auto ${
-                      isPass ? 'border-[#27c93f]' : 'border-[#f26a3d]'
-                    }`}
-                  >
-                    <span className={`font-bold ${isPass ? 'text-[#27c93f]' : 'text-[#f26a3d]'}`}>
-                      {rule.id}:
-                    </span>
-                    <span>{rule.title}</span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded font-bold ${
-                        isPass ? 'bg-[#27c93f] text-[#08090a]' : 'bg-[#f26a3d] text-[#08090a]'
-                      }`}
-                    >
-                      {rule.current}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </>
+        <RulePins
+          rules={analysis.ruleResults}
+          currentPage={currentPage}
+          selectedRuleId={selectedRuleId}
+          onSelectRule={onSelectRule}
+        />
       )}
     </div>
   );
