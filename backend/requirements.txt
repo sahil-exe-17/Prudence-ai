@@ -2,3 +2,7 @@ fastapi==0.124.0
 uvicorn[standard]==0.38.0
 python-multipart==0.0.20
 
+# Required by localhost/server.py for selectable PDF text extraction.
+# Without it, text-derived facts are unavailable and the assessor is told so
+# explicitly. It used to fail silently, which changed verdicts between machines.
+PyMuPDF==1.26.3
