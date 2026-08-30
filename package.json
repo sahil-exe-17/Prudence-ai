@@ -14,11 +14,14 @@
   "dependencies": {
     "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^5.0.4",
+    "clsx": "^2.1.1",
     "concurrently": "^9.2.1",
+    "framer-motion": "^13.1.1",
     "lucide-react": "^0.544.0",
     "pdfjs-dist": "^6.0.227",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "tailwind-merge": "^3.6.0",
     "three": "^0.185.1"
   },
   "devDependencies": {

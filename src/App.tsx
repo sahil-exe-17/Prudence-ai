@@ -1,4 +1,5 @@
 import MorphText from './components/MorphText';
+import FlipFadeText from './components/FlipFadeText';
 import GenerateButton from './components/GenerateButton';
 import {
   ArrowRight,
@@ -337,6 +338,74 @@ function App() {
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [dragState, setDragState] = useState({ isDragging: false, startX: 0, startY: 0, rx: 60, rz: 45 });
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [activeTool, setActiveTool] = useState<'select' | 'pan' | 'measure'>('select');
+  const [isPanDragging, setIsPanDragging] = useState<boolean>(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [measureLine, setMeasureLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [isMeasuring, setIsMeasuring] = useState<boolean>(false);
+
+  const handleZoomIn = () => setZoomScale((s) => Math.min(Number((s + 0.25).toFixed(2)), 4.0));
+  const handleZoomOut = () => setZoomScale((s) => Math.max(Number((s - 0.25).toFixed(2)), 0.3));
+  const handleResetZoom = () => {
+    setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
+    setActiveTool('select');
+    setMeasureLine(null);
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (is3D) {
+      onMouseDown(e);
+      return;
+    }
+
+    if (activeTool === 'pan' || e.button === 1) {
+      setIsPanDragging(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    } else if (activeTool === 'measure') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setMeasureLine({ x1: x, y1: y, x2: x, y2: y });
+      setIsMeasuring(true);
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (is3D) {
+      onMouseMove(e);
+      return;
+    }
+
+    if (isPanDragging) {
+      setPanOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y,
+      });
+    } else if (activeTool === 'measure' && isMeasuring) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setMeasureLine((prev) => (prev ? { ...prev, x2: x, y2: y } : null));
+    }
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (isPanDragging) {
+      setIsPanDragging(false);
+    }
+    if (isMeasuring) {
+      setIsMeasuring(false);
+    }
+  };
+
+  const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (is3D) return;
+    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+    setZoomScale((s) => Math.min(Math.max(Number((s * zoomFactor).toFixed(2)), 0.3), 4.0));
+  };
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   const [rulePacks, setRulePacks] = useState({
@@ -833,7 +902,23 @@ function App() {
                 </div>
 
                 {/* Canvas Drawing Surface (Dynamic Height Fitting Viewport) */}
-                <div className="relative flex-1 w-full h-full flex items-center justify-center p-3 overflow-hidden min-h-0">
+                <div
+                  className="relative flex-1 w-full h-full flex items-center justify-center p-3 overflow-hidden min-h-0 select-none"
+                  onWheel={handleWheelZoom}
+                  onMouseDown={handleCanvasMouseDown}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseUp={handleCanvasMouseUp}
+                  onMouseLeave={handleCanvasMouseUp}
+                  style={{
+                    cursor: is3D
+                      ? dragState.isDragging ? 'grabbing' : 'grab'
+                      : activeTool === 'pan'
+                      ? isPanDragging ? 'grabbing' : 'grab'
+                      : activeTool === 'measure'
+                      ? 'crosshair'
+                      : 'default',
+                  }}
+                >
                   <div
                     className="preview-wrapper w-full h-full relative flex items-center justify-center"
                     style={{
@@ -841,9 +926,15 @@ function App() {
                       '--rx': `${dragState.rx}deg`,
                       // @ts-ignore
                       '--rz': `${dragState.rz}deg`,
+                      transform: is3D
+                        ? undefined
+                        : `translate3d(${panOffset.x}px, ${panOffset.y}px, 0px) scale(${zoomScale})`,
+                      transition: isPanDragging ? 'none' : 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)',
+                      transformOrigin: 'center center',
                     }}
                   >
-                    <div className="preview w-full h-full flex items-center justify-center relative">• {file ? (
+                    <div className="preview w-full h-full flex items-center justify-center relative">
+                      {file ? (
                         <DrawingPreview
                           file={file}
                           previewUrl={previewUrl}
@@ -877,15 +968,92 @@ function App() {
                       <div className="holo-gable gable-b" />
                     </div>
                   </div>
+
+                  {/* Dynamic Ruler Measurement Line Overlay */}
+                  {measureLine && (
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-40">
+                      <line
+                        x1={measureLine.x1}
+                        y1={measureLine.y1}
+                        x2={measureLine.x2}
+                        y2={measureLine.y2}
+                        stroke="#f26a3d"
+                        strokeWidth="2.5"
+                        strokeDasharray="4 4"
+                      />
+                      <circle cx={measureLine.x1} cy={measureLine.y1} r="6" fill="#f26a3d" />
+                      <circle cx={measureLine.x2} cy={measureLine.y2} r="6" fill="#f26a3d" />
+                      <g transform={`translate(${(measureLine.x1 + measureLine.x2) / 2}, ${(measureLine.y1 + measureLine.y2) / 2 - 14})`}>
+                        <rect x="-42" y="-12" width="84" height="24" rx="4" fill="#08090a" stroke="#f26a3d" strokeWidth="1.5" />
+                        <text x="0" y="4" fill="#f4f0e8" fontSize="11" fontFamily="IBM Plex Mono" fontWeight="bold" textAnchor="middle">
+                          {(Math.hypot(measureLine.x2 - measureLine.x1, measureLine.y2 - measureLine.y1) * 0.045).toFixed(2)} m
+                        </text>
+                      </g>
+                    </svg>
+                  )}
                 </div>
 
-                {/* Bottom Controls Bar */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded bg-[#111416]/90 border border-[rgba(255,255,255,0.08)] p-1 backdrop-blur-md">
-                  <button className="tool-btn" title="Zoom in"><ZoomIn size={16} /></button>
-                  <button className="tool-btn" title="Zoom out"><ZoomOut size={16} /></button>
-                  <button className="tool-btn" title="Pan"><Hand size={16} /></button>
-                  <div className="h-4 w-px bg-[rgba(255,255,255,0.08)] mx-1" />
-                  <button className="tool-btn" title="Measure"><Ruler size={16} /></button>
+                {/* Bottom Interactive Controls Bar */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded-full bg-[#111416]/95 border border-[rgba(255,255,255,0.15)] px-2 py-1 backdrop-blur-md shadow-2xl">
+                  {/* Zoom Out */}
+                  <button
+                    type="button"
+                    onClick={handleZoomOut}
+                    className="tool-btn hover:text-[#f26a3d] hover:border-[#f26a3d] rounded-full p-1.5"
+                    title="Zoom Out (Scale -)"
+                  >
+                    <ZoomOut size={16} />
+                  </button>
+
+                  {/* Zoom Level Indicator / Reset Scale */}
+                  <button
+                    type="button"
+                    onClick={handleResetZoom}
+                    className="px-2 py-0.5 font-mono text-[11px] font-bold text-[#f26a3d] hover:bg-white/10 rounded-full transition cursor-pointer"
+                    title="Click to Reset Scale (100%)"
+                  >
+                    {Math.round(zoomScale * 100)}%
+                  </button>
+
+                  {/* Zoom In */}
+                  <button
+                    type="button"
+                    onClick={handleZoomIn}
+                    className="tool-btn hover:text-[#f26a3d] hover:border-[#f26a3d] rounded-full p-1.5"
+                    title="Zoom In (Scale +)"
+                  >
+                    <ZoomIn size={16} />
+                  </button>
+
+                  <div className="h-4 w-px bg-[rgba(255,255,255,0.15)] mx-1" />
+
+                  {/* Hand (Pan Tool) */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTool((prev) => (prev === 'pan' ? 'select' : 'pan'))}
+                    className={`tool-btn rounded-full p-1.5 transition-all ${
+                      activeTool === 'pan'
+                        ? 'bg-[#f26a3d] text-[#08090a] border-[#f26a3d] font-bold shadow-[0_0_12px_rgba(242,106,61,0.6)]'
+                        : 'hover:text-[#f26a3d]'
+                    }`}
+                    title="Hand Tool (Pan Drawing)"
+                  >
+                    <Hand size={16} />
+                  </button>
+
+                  {/* Ruler Measure Tool */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTool((prev) => (prev === 'measure' ? 'select' : 'measure'))}
+                    className={`tool-btn rounded-full p-1.5 transition-all ${
+                      activeTool === 'measure'
+                        ? 'bg-[#f26a3d] text-[#08090a] border-[#f26a3d] font-bold shadow-[0_0_12px_rgba(242,106,61,0.6)]'
+                        : 'hover:text-[#f26a3d]'
+                    }`}
+                    title="Ruler Measure Tool"
+                  >
+                    <Ruler size={16} />
+                  </button>
                 </div>
               </div>
             </section>
@@ -1258,19 +1426,24 @@ function LandingPage({ onLaunch, onUpload, theme, setTheme }: { onLaunch: () => 
           <span>ARCHITECTURAL BLUEPRINT CODE COMPLIANCE</span>
         </div>
 
-        {/* Clean 1-Color Space Grotesk Headline */}
-        <div className="relative z-10 max-w-5xl my-2">
-          <MorphText
+        {/* Sleek 3D Flip-Fade Animated Headline */}
+        <div className="relative z-10 max-w-5xl my-2 flex flex-col items-center">
+          <FlipFadeText
             words={[
               "CATCH CODE VIOLATIONS",
               "AUDIT BBMP & NBC LAWS",
               "ZERO REJECTION SANCTIONS",
               "INSTANT CAD COMPLIANCE"
             ]}
-            interval={3200}
-            fontSize="clamp(2.2rem, 5.5vw, 4.5rem)"
-            subtext="BEFORE BREAKING GROUND ON SITE"
+            interval={2800}
+            textClassName="font-space text-3xl sm:text-5xl md:text-6xl font-black uppercase tracking-tight text-[#f26a3d] drop-shadow-[0_0_35px_rgba(242,106,61,0.6)]"
+            letterDuration={0.5}
+            staggerDelay={0.06}
+            exitStaggerDelay={0.03}
           />
+          <div className="font-mono text-xs sm:text-sm font-bold tracking-widest text-[#8c999c] uppercase mt-2">
+            BEFORE BREAKING GROUND ON SITE
+          </div>
         </div>
 
         {/* Simple, Attractive Sentence Subtitle */}
