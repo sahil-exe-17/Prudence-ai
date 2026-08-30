@@ -75,8 +75,14 @@ In India’s rapidly growing urban landscape, **architectural building plan appr
 * **Interactive Bylaw Sandbox** (`src/components/InteractiveBylawTester.tsx`): Test custom plot dimensions, road widths, and building heights with instant statutory PASS/FAIL feedback.
 * **Approval Workflow Simulator** (`src/components/InteractiveWorkflowSimulator.tsx`): Multi-stage municipal sanction simulation (Submission -> Statutory Screening -> AI Vision Check -> Department Approval -> NOC Issuance).
 
-### 4. 🏢 3D Wireframe Spatial Model Projection
-* Interactive **WebGL Three.js canvas** (`src/components/ThreeBuildingBackground.tsx`) offering a 3D wireframe spatial projection of floor plan extrusions and setback clearances.
+### 4. 🏢 2D → 3D Holographic Reconstruction
+Toggling **3D View** rebuilds the uploaded 2D sheet as a live holographic building model — not a decorative animation, but geometry derived from the drawing itself.
+
+* **Vision vectorisation** (`POST /api/extract-plan`): Gemini traces the sheet into metric geometry — wall centre-lines, room polygons, door/window openings, storey count and floor-to-floor height — in a plot-relative coordinate system that matches the raster, so violation pins land on the right part of the model.
+* **Deterministic geometry engine** (`src/lib/planModel.ts`): with no API key, or when the vision read is too thin to trust, a seeded slice-and-dice generator builds the statutory envelope from plot dimensions and DCR setbacks. The 3D view never goes blank, and the same drawing always produces the same model.
+* **Holographic renderer** (`src/components/HolographicPlanViewer.tsx`): a custom WebGL shader with fresnel rim-light, scanline interference and a rising materialisation sweep, over additively-blended extruded walls. Openings are genuinely punched out of the wall solids rather than painted on.
+* **Interaction**: orbit and zoom, wireframe/solid toggle, storey explode slider, room-area labels, and the original 2D drawing projected on the ground plane so the 2D→3D correspondence is visible at a glance.
+* **Compliance in 3D**: failed rules project as colour-coded pulsing beacons through the full building height (red = critical, amber = major, green = pass).
 
 ### 5. 🤖 Dual-Engine AI Architecture & Fallback
 * **Primary AI Engine**: Google Gemini 3.1 Flash / Groq (Llama 3.3 70B) for multi-modal spatial reasoning.
@@ -153,7 +159,12 @@ PRUDENCE-ai/
 │   ├── components/             # Interactive UI Modules
 │   │   ├── InteractiveBylawTester.tsx        # Bylaw limit sandbox
 │   │   ├── InteractiveWorkflowSimulator.tsx  # Municipal approval simulator
+│   │   ├── HolographicPlanViewer.tsx         # WebGL 2D→3D hologram renderer
+│   │   ├── HoloOverlay.tsx                   # 3D view HUD, metrics & controls
 │   │   └── ThreeBuildingBackground.tsx       # 3D WebGL background model
+│   ├── lib/
+│   │   ├── planModel.ts        # 3D plan schema, AI normaliser & geometry engine
+│   │   └── utils.ts            # Shared helpers
 │   ├── agents/                 # Multi-agent Python orchestration code
 │   ├── App.tsx                 # Main Application Layout & Logic
 │   ├── index.css               # Global Stylesheet & Tailwind CSS utilities
@@ -231,6 +242,11 @@ The Python backend exposes the following REST API endpoints:
 * **Description**: Evaluates structured plan metrics against DCR, NBC 2016, and RERA rule packs.
 * **Payload**: `{ "setbackFront": 2.5, "fsi": 2.1, "rampSlope": "1:8", "rules": ["DCR", "NBC"] }`
 * **Response**: Statutory PASS/FAIL status, metric deficits, and rule clause references.
+
+### `POST /api/extract-plan`
+* **Description**: Vectorises a 2D drawing into 3D-ready building geometry for the holographic viewer. Returns metric wall centre-lines, room polygons and openings in plot-relative coordinates.
+* **Payload**: `{ "base64": "data:image/png;base64,...", "filename": "plan.png", "mimeType": "image/png", "hints": { "plotWidth": 24, "setbacks": { "front": 4.5 } } }`
+* **Response**: `{ "model": { "plot": {...}, "walls": [...], "rooms": [...], "openings": [...], "confidence": 0.8 }, "provider": "Gemini (...)" }`, or `{ "error": "..." }` — on any error the browser falls back to the local deterministic geometry engine.
 
 ### `POST /api/chat`
 * **Description**: Context-aware AI assistant endpoint grounded in active blueprint analysis.

@@ -264,6 +264,22 @@ def uploaded_image_size(payload: dict) -> tuple[int, int] | None:
         return None
 
 
+def _detect_pdf_text_support() -> bool:
+    try:
+        import fitz  # PyMuPDF  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+# Resolved once at import so the capability can be reported to the client.
+# Previously this failure was swallowed per-request, which silently changed
+# compliance verdicts between machines depending on whether PyMuPDF happened
+# to be installed. It is now surfaced instead of hidden.
+PDF_TEXT_AVAILABLE = _detect_pdf_text_support()
+
+
 def extract_uploaded_text(payload: dict) -> str:
     raw = uploaded_file_bytes(payload)
     if not raw:
@@ -271,6 +287,13 @@ def extract_uploaded_text(payload: dict) -> str:
     mime_type = (payload.get("mimeType") or payload.get("type") or "").lower()
     filename = (payload.get("filename") or "").lower()
     if "pdf" in mime_type or filename.endswith(".pdf"):
+        if not PDF_TEXT_AVAILABLE:
+            print(
+                "[PRUDENCE] PyMuPDF is not installed; PDF text extraction is unavailable. "
+                "Run: pip install -r backend/requirements.txt",
+                flush=True,
+            )
+            return ""
         try:
             import fitz  # PyMuPDF
 
@@ -281,7 +304,8 @@ def extract_uploaded_text(payload: dict) -> str:
                     if sum(len(part) for part in text_parts) > 180_000:
                         break
             return "\n".join(text_parts).strip()
-        except Exception:
+        except Exception as error:
+            print(f"[PRUDENCE] PDF text extraction failed: {error}", flush=True)
             return ""
     if mime_type.startswith("text/"):
         return raw.decode("utf-8", errors="replace")
@@ -1086,6 +1110,238 @@ def gemini_document_analysis(payload: dict) -> dict:
     return fallback
 
 
+# Measurements the vision model is allowed to report. Mirrors FactKey in
+# src/lib/complianceKnowledgeBase.ts — keep the two lists in sync.
+FACT_FIELDS = [
+    ("plotArea", "Net plot area in square metres"),
+    ("builtUpArea", "Total built-up area across all floors, square metres"),
+    ("footprintArea", "Ground floor footprint / covered area, square metres"),
+    ("carpetArea", "Measured carpet area, square metres"),
+    ("declaredCarpetArea", "Declared or advertised carpet area, square metres"),
+    ("buildingHeight", "Building height above ground level, metres"),
+    ("floors", "Number of storeys, count"),
+    ("frontSetback", "Front setback, metres"),
+    ("rearSetback", "Rear setback, metres"),
+    ("sideSetbackLeft", "Left side setback, metres"),
+    ("sideSetbackRight", "Right side setback, metres"),
+    ("roadWidth", "Abutting road width, metres"),
+    ("accessWidth", "Public street or means of access width, metres"),
+    ("stairWidth", "Fire evacuation stair clear width, metres"),
+    ("corridorWidth", "Common corridor clear width, metres"),
+    ("rampSlopeRun", "Vehicle ramp run per 1 unit of rise, e.g. 8 for a 1:8 ramp"),
+    ("plinthHeight", "Plinth height above finished ground level, metres"),
+    ("roomHeight", "Habitable room clear ceiling height, metres"),
+    ("fireGateWidth", "Main entrance gate clear opening, metres"),
+    ("fireTenderClearance", "Fire tender approach clearance around the building, metres"),
+    ("turningRadius", "Fire tender turning radius, metres"),
+    ("parkingProvided", "Car parking bays provided, count"),
+    ("parkingRequired", "Car parking bays stated as required, count"),
+    ("refugeAreaProvided", "Refuge area provided, square metres"),
+    ("reraRegistrationShown", "true if a RERA registration number appears anywhere"),
+    ("sanctionApprovalShown", "true if sanctioned plan / layout approval / commencement certificate is referenced"),
+    ("completionDisclosureShown", "true if a completion date or occupancy certificate status is stated"),
+    ("layoutOpenSpaceShown", "true if layout open space / recreational ground is marked"),
+]
+
+
+def gemini_plan_facts(payload: dict) -> dict:
+    """Extracts MEASUREMENTS from a drawing. Never returns a verdict.
+
+    Compliance Pass/Fail is decided exclusively by the deterministic engine in
+    src/lib/complianceEngine.ts. Keeping the model on facts is what makes two
+    devices agree on the same drawing.
+    """
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "GEMINI_API_KEY not configured", "facts": {}}
+
+    mime_type = payload.get("mimeType") or payload.get("type") or ""
+    encoded_data = (payload.get("data") or payload.get("base64") or "").strip()
+
+    if "data:" in encoded_data and ";" in encoded_data:
+        sniffed = encoded_data.split("data:")[1].split(";")[0]
+        if sniffed:
+            mime_type = sniffed
+    if "," in encoded_data and encoded_data.lower().startswith("data:"):
+        encoded_data = encoded_data.split(",", 1)[1]
+
+    if not encoded_data:
+        return {"error": "No drawing data supplied", "facts": {}}
+    if not (str(mime_type).lower().startswith("image/") or str(mime_type).lower() == "application/pdf"):
+        return {"error": f"Fact extraction needs an image or PDF, got {mime_type or 'unknown type'}", "facts": {}}
+
+    field_lines = "\n".join(f"  - {name}: {description}" for name, description in FACT_FIELDS)
+    prompt = (
+        "You are PRUDENCE, a measurement extraction engine for Indian building plan review. "
+        "Your ONLY job is to read values that are actually printed on this drawing. "
+        "You do NOT judge compliance. You do NOT decide pass or fail. You do NOT give opinions.\n\n"
+        "Extract these fields where — and only where — the drawing shows them:\n"
+        f"{field_lines}\n\n"
+        "Return STRICT JSON shaped as: "
+        '{"fieldName": {"value": <number or boolean>, "evidence": "<the exact text or dimension you read it from>", '
+        '"confidence": <0..1>}, ...}\n\n'
+        "HARD RULES — violating these produces wrong statutory verdicts:\n"
+        "1. OMIT any field you cannot read. An omitted field is reported to the assessor as "
+        "'not readable' and is safe. A guessed field silently becomes a wrong legal finding.\n"
+        "2. 'evidence' must quote text or a dimension that genuinely appears on the sheet. "
+        "Never write evidence for a value you inferred, estimated or assumed.\n"
+        "3. Convert every length to METRES and every area to SQUARE METRES before returning it. "
+        "If the sheet is in mm, feet or sq.ft, convert and say so in the evidence.\n"
+        "4. For a ramp written '1:8', return rampSlopeRun = 8.\n"
+        "5. Boolean fields are true only if the item genuinely appears; otherwise return false.\n"
+        "6. Do not copy the numbers in this prompt. They are field descriptions, not data.\n"
+        f"Drawing metadata: {json.dumps({k: payload.get(k) for k in ['filename', 'size', 'mimeType']})}"
+    )
+
+    body = {
+        "contents": [{
+            "parts": [
+                {"text": prompt},
+                {"inline_data": {"mime_type": mime_type, "data": encoded_data}},
+            ]
+        }],
+        # Temperature 0: same drawing, same key, same numbers.
+        "generationConfig": {
+            "temperature": 0.0,
+            "topP": 1.0,
+            "topK": 1,
+            "maxOutputTokens": 4096,
+            "responseMimeType": "application/json",
+        },
+    }
+
+    model = os.environ.get("PRUDENCE_GEMINI_MODEL") or "gemini-3.1-flash-lite"
+    request = urllib.request.Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=180) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        return {"facts": strip_json_text(text), "provider": f"Gemini ({model})"}
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        return {"error": friendly_gemini_error(model, error.code, detail), "facts": {}}
+    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, json.JSONDecodeError) as error:
+        return {"error": f"Fact extraction failed on {model}: {error}", "facts": {}}
+
+
+def plan_facts_response(payload: dict) -> dict:
+    """Combines the vision read with deterministic sheet-text extraction."""
+    result = gemini_plan_facts(payload)
+    plan_text = extract_uploaded_text(payload)
+    result["sheetText"] = plan_text[:200_000]
+    result["textCharacters"] = len(plan_text)
+    result["textExtractionAvailable"] = PDF_TEXT_AVAILABLE
+    if not PDF_TEXT_AVAILABLE:
+        result["textExtractionNote"] = (
+            "PyMuPDF is not installed, so selectable PDF text could not be read on this machine. "
+            "Install it with `pip install -r backend/requirements.txt` for text-based fact extraction."
+        )
+    return result
+
+
+PLAN_GEOMETRY_SCHEMA = (
+    '{"plot": {"width": number, "depth": number}, '
+    '"setbacks": {"front": number, "rear": number, "left": number, "right": number}, '
+    '"levels": number, "floorHeight": number, '
+    '"walls": [{"x1": number, "y1": number, "x2": number, "y2": number, '
+    '"thickness": number, "height": number, "level": number, "kind": "exterior|interior"}], '
+    '"rooms": [{"name": string, "polygon": [[number, number]], "level": number}], '
+    '"openings": [{"type": "door|window", "wall": number, "t": number, '
+    '"width": number, "height": number, "sill": number, "level": number}], '
+    '"notes": [string], "confidence": number}'
+)
+
+
+def gemini_plan_geometry(payload: dict) -> dict:
+    """Vectorises a 2D building drawing into 3D-ready geometry via Gemini vision.
+
+    Returns {"model": {...}} on success, or {"error": "..."} so the browser can
+    fall back to the deterministic geometry engine without breaking the demo.
+    """
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "GEMINI_API_KEY not configured"}
+
+    mime_type = payload.get("mimeType") or payload.get("type") or ""
+    encoded_data = (payload.get("data") or payload.get("base64") or "").strip()
+
+    if "data:" in encoded_data and ";" in encoded_data:
+        sniffed = encoded_data.split("data:")[1].split(";")[0]
+        if sniffed:
+            mime_type = sniffed
+    if "," in encoded_data and encoded_data.lower().startswith("data:"):
+        encoded_data = encoded_data.split(",", 1)[1]
+
+    if not encoded_data:
+        return {"error": "No drawing data supplied"}
+    if not (str(mime_type).lower().startswith("image/") or str(mime_type).lower() == "application/pdf"):
+        return {"error": f"Geometry extraction needs an image or PDF, got {mime_type or 'unknown type'}"}
+
+    hints = payload.get("hints") or {}
+    prompt = (
+        "You are PRUDENCE, a CAD vectorisation engine. Convert this 2D architectural drawing "
+        "(floor plan, site plan, or elevation sheet) into 3D building geometry. "
+        "Work in METRES. Use a coordinate system whose origin is the TOP-LEFT corner of the plot, "
+        "with x increasing to the right and y increasing downwards, exactly matching the image. "
+        "Read the printed dimension strings and the drawing scale to recover real metre values; "
+        "if no scale is printed, infer it from a known reference such as a door leaf (0.9 m) or a "
+        "standard parking bay (2.5 m x 5.0 m), and lower your confidence accordingly. "
+        "Trace every wall you can see as a straight centre-line segment. Mark walls on the building "
+        "outline as 'exterior' and partitions as 'interior'. Give each wall a level index starting at 0. "
+        "For rooms, return the closed polygon of the internal face in the same coordinates. "
+        "For openings, 'wall' is the 0-based index into the walls array and 't' is the position along "
+        "that wall from 0 at (x1,y1) to 1 at (x2,y2). "
+        "Return STRICT JSON only, with this exact schema: " + PLAN_GEOMETRY_SCHEMA + " "
+        "Rules: emit at least 4 walls if any structure is visible; never return coordinates outside the "
+        "plot; use 0.23 m as default exterior wall thickness and 0.115 m for partitions; "
+        "use 3.0 m floor height if none is printed. Set 'confidence' between 0 and 1 to describe how "
+        "reliable your scale recovery was, and put any caveats in 'notes'. "
+        "If the sheet is not a building drawing at all, return {\"walls\": []}. "
+        f"Known values from the compliance report (prefer these when they conflict with your read): {json.dumps(hints)} "
+        f"File metadata: {json.dumps({k: payload.get(k) for k in ['filename', 'size', 'mimeType']})}"
+    )
+
+    body = {
+        "contents": [{
+            "parts": [
+                {"text": prompt},
+                {"inline_data": {"mime_type": mime_type, "data": encoded_data}},
+            ]
+        }],
+        "generationConfig": {
+            "temperature": 0.0,
+            "maxOutputTokens": 8192,
+            "responseMimeType": "application/json",
+        },
+    }
+
+    model = os.environ.get("PRUDENCE_GEMINI_MODEL") or "gemini-3.1-flash-lite"
+    request = urllib.request.Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=180) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        parsed = strip_json_text(text)
+        return {"model": parsed, "provider": f"Gemini ({model})"}
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        return {"error": friendly_gemini_error(model, error.code, detail)}
+    except (urllib.error.URLError, TimeoutError, KeyError, ValueError, json.JSONDecodeError) as error:
+        return {"error": f"Geometry extraction failed on {model}: {error}"}
+
+
 def groq_analysis(payload: dict) -> dict:
     api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY")
     if not api_key:
@@ -1266,7 +1522,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
-        if self.path not in {"/api/analyze", "/api/analyze-file", "/api/chat"}:
+        if self.path not in {"/api/analyze", "/api/analyze-file", "/api/chat", "/api/extract-plan", "/api/extract-facts"}:
             self.send_error(404)
             return
         length = int(self.headers.get("content-length", "0"))
@@ -1278,7 +1534,11 @@ class Handler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             payload = {}
 
-        if self.path == "/api/chat":
+        if self.path == "/api/extract-plan":
+            result = gemini_plan_geometry(payload)
+        elif self.path == "/api/extract-facts":
+            result = plan_facts_response(payload)
+        elif self.path == "/api/chat":
             if os.environ.get("GROQ_API_KEY") or os.environ.get("PRUDENCE_GROQ_API_KEY"):
                 result = groq_chat(payload)
             elif os.environ.get("GEMINI_API_KEY"):

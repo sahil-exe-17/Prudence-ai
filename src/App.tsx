@@ -47,6 +47,28 @@ import type { ChangeEvent, DragEvent } from 'react';
 import { ThreeBuildingBackground } from './components/ThreeBuildingBackground';
 import { InteractiveWorkflowSimulator } from './components/InteractiveWorkflowSimulator';
 import { InteractiveBylawTester } from './components/InteractiveBylawTester';
+import { HolographicPlanViewer } from './components/HolographicPlanViewer';
+import { HoloBuildingState, HoloOverlay } from './components/HoloOverlay';
+import { EvidenceLedger } from './components/EvidenceLedger';
+import {
+  markersFromAnalysis,
+  normalizePlanModel,
+  synthesizePlanModel,
+  type PlanModel,
+} from './lib/planModel';
+import {
+  evaluateCompliance,
+  mergeFacts,
+  violationsFromReport,
+  type ComplianceReport,
+} from './lib/complianceEngine';
+import type { PackId, PlanFacts } from './lib/complianceKnowledgeBase';
+import { factsFromGeometry, factsFromText, factsFromVision } from './lib/factExtraction';
+import {
+  SAMPLE_PROJECT_FACTS,
+  SAMPLE_PROJECT_LABEL,
+  withPins,
+} from './lib/compliancePresentation';
 
 type Jurisdiction = 'bbmp' | 'mcgm' | 'ubbl';
 type Severity = 'HIGH' | 'MEDIUM' | 'LOW' | 'CRITICAL' | 'MAJOR' | 'MINOR' | 'INFO';
@@ -121,169 +143,9 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
-function makeAnalysis(file: File, jurisdiction: string): Analysis {
-  const ruleResults: RuleResult[] = [
-    {
-      id: 'GH-DCR-01',
-      pack: 'DCR',
-      title: 'Rear Setback Clearance',
-      required: '4.00 m minimum rear setback.',
-      current: '1.00 m provided',
-      status: 'Fail',
-      severity: 'CRITICAL',
-      clause: 'DCR 2026 - Table 4.2 Setback Clearances',
-      evidence: 'Site plan callout VIOLATION 1 states Rear Setback Required 4.00 m, Provided 1.00 m (3.00 m deficit). This restricts rear access for service and emergency vehicles.',
-      action: 'Increase rear setback by 3.00 m or shift the rear building footprint wall inward.',
-      annotation: { x: 14.5, y: 13.0, page: 1, label: 'V1 1.00m' },
-    },
-    {
-      id: 'GH-DCR-02',
-      pack: 'DCR',
-      title: 'Front Setback Margin',
-      required: '6.00 m minimum front setback.',
-      current: '2.00 m provided',
-      status: 'Fail',
-      severity: 'CRITICAL',
-      clause: 'DCR 2026 - Clause 14.2 Road Frontage Setback',
-      evidence: 'Site plan callout VIOLATION 2 states Front Setback Required 6.00 m, Provided 2.00 m from 60 m wide road. 4.00 m shortfall presents high municipal rejection risk.',
-      action: 'Increase front setback by 4.00 m or move the building footprint back from the 60 m wide public road.',
-      annotation: { x: 14.5, y: 33.5, page: 1, label: 'V2 2.00m' },
-    },
-    {
-      id: 'GH-NBC-03',
-      pack: 'NBC',
-      title: 'Staircase Clear Width',
-      required: 'At least 1.20 m clear stair width.',
-      current: '0.90 m provided',
-      status: 'Fail',
-      severity: 'MAJOR',
-      clause: 'NBC 2016 - Part 4 Sec 4.3 (Egress Stairways)',
-      evidence: 'Typical floor plan callout VIOLATION 3 states Stair Width Required >= 1.20 m, Provided 0.90 m. Restricted width impairs safe occupant egress during emergency evacuation.',
-      action: 'Widen the staircase flight by 0.30 m to meet the NBC clear width requirement.',
-      annotation: { x: 33.5, y: 16.0, page: 1, label: 'V3 0.90m' },
-    },
-    {
-      id: 'GH-NBC-04',
-      pack: 'NBC',
-      title: 'Common Corridor Clear Width',
-      required: 'At least 1.50 m clear corridor width.',
-      current: '1.20 m provided',
-      status: 'Fail',
-      severity: 'MAJOR',
-      clause: 'NBC 2016 - Part 4 Sec 4.2 (Corridor Standards)',
-      evidence: 'Typical floor plan callout VIOLATION 4 states Corridor Width Required >= 1.50 m, Provided 1.20 m. Corridors serving multi-unit floors require min 1.50 m clear span.',
-      action: 'Increase central corridor width by 0.30 m across the residential floor passage.',
-      annotation: { x: 35.5, y: 24.5, page: 1, label: 'V4 1.20m' },
-    },
-    {
-      id: 'GH-NBC-05',
-      pack: 'NBC',
-      title: 'Building Overall Permissible Height',
-      required: 'Maximum permissible building height: 24.00 m.',
-      current: '24.70 m provided',
-      status: 'Fail',
-      severity: 'CRITICAL',
-      clause: 'NBC 2016 & DCR - High-Rise Height Limits',
-      evidence: 'Front elevation & section drawing show building height 24.70 m against permissible <= 24.00 m (0.70 m excess height above zoning limit).',
-      action: 'Reduce top floor parapet/headroom height by 0.70 m or obtain high-rise planning board approval.',
-      annotation: { x: 62.0, y: 28.0, page: 1, label: 'V5 24.70m' },
-    },
-    {
-      id: 'GH-DCR-06',
-      pack: 'DCR',
-      title: 'Mandatory Vehicle Parking Bays',
-      required: '42 car parking spaces required.',
-      current: '25 car parking spaces provided',
-      status: 'Fail',
-      severity: 'MAJOR',
-      clause: 'DCR Parking Regulations - Off-Street Parking Schedule',
-      evidence: 'Parking layout drawing shows 42 cars required based on residential unit count, but only 25 bays provided (17 car parking deficit).',
-      action: 'Provide 17 additional parking spaces using puzzle stackers or expanding basement 2 layout.',
-      annotation: { x: 32.0, y: 76.0, page: 1, label: 'V6 25 cars' },
-    },
-    {
-      id: 'GH-DCR-PASS-01',
-      pack: 'DCR',
-      title: 'Side Setbacks (Left & Right)',
-      required: 'Minimum side setback: 3.00 m on both sides.',
-      current: 'Left side 3.00 m; Right side 3.00 m',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'DCR 2026 - Table 4.1 Side Margin Schedule',
-      evidence: 'Site plan labels show SIDE SETBACK 3.00 m provided on both left and right property boundaries, satisfying DCR open space criteria.',
-      action: 'Compliant. Both side margins meet the mandatory statutory setback threshold.',
-      annotation: { x: 8.5, y: 23.0, page: 1, label: 'PASS 3.0m' },
-    },
-    {
-      id: 'GH-DCR-PASS-02',
-      pack: 'DCR',
-      title: 'Public Access Road Width',
-      required: 'Minimum public street width: 6.00 m.',
-      current: '60.00 m wide road shown',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'DCR Regulation 12.1 - Access Road Standards Road Standards',
-      evidence: 'Site plan frontage label displays 60.0 m wide public road, significantly exceeding the 6.00 m access minimum for residential multi-family work.',
-      action: 'Compliant. Road width is well above the statutory access requirement.',
-    },
-    {
-      id: 'GH-DCR-PASS-03',
-      pack: 'DCR',
-      title: 'FSI / Gross Built-Up Area',
-      required: 'Proposed built-up area must not exceed 3,000.00 sq.m.',
-      current: '2,850.00 sq.m proposed',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'DCR FSI Schedule - Plot FAR Utilization',
-      evidence: 'Area statement table shows permissible gross area 3,000.00 sq.m, proposed 2,850.00 sq.m (150 sq.m unutilized buffer).',
-      action: 'Compliant. Proposed floor space ratio is within permissible statutory limits.',
-    },
-    {
-      id: 'GH-RERA-PASS-04',
-      pack: 'RERA',
-      title: 'Carpet Area Schedule Disclosure',
-      required: 'Unit carpet area disclosures must match drawing schedule.',
-      current: '100% Match Verified',
-      status: 'Pass',
-      severity: 'INFO',
-      clause: 'RERA Act 2016 - Section 4(2)(l) Allottee Disclosure',
-      evidence: 'Unit carpet area schedule matches the architectural floor plans within 1.4% tolerance, meeting mandatory RERA homebuyer disclosure standards.',
-      action: 'Compliant. Ready for statutory homebuyer agreement disclosure.',
-    },
-  ];
-
-  const passCount = ruleResults.filter((r) => r.status === 'Pass').length;
-  const totalRules = ruleResults.length;
-  const score = Math.round((passCount / Math.max(totalRules, 1)) * 100);
-
-  const violations: Violation[] = ruleResults
-    .filter((r) => r.status === 'Fail')
-    .map((r) => ({
-      id: r.id,
-      severity: r.severity || 'HIGH',
-      title: r.title,
-      required: r.required,
-      found: r.current,
-      delta: '-Deficit',
-      clause: r.clause,
-      description: r.evidence,
-      recommendation: r.action,
-      annotation: r.annotation ? { ...r.annotation, label: r.annotation.label || r.id } : undefined,
-    }));
-
-  return {
-    documentName: file.name,
-    documentSize: formatBytes(file.size),
-    jurisdiction,
-    score,
-    coverage: Math.round((passCount / Math.max(totalRules, 1)) * 100),
-    risk: score >= 70 ? 'Low' : score >= 40 ? 'Medium' : 'High',
-    status: score >= 70 ? 'Review Passed' : 'Conditional Approval',
-    ruleResults,
-    violations,
-    totalPages: 1,
-  };
-}
+// The former makeAnalysis() hard-coded a fixed Pass/Fail set here. It was one of
+// five divergent verdict sources and is why the same drawing scored differently
+// on different machines. Verdicts now come only from evaluateCompliance().
 
 function App() {
   const [view, setView] = useState<'landing' | 'workspace'>('landing');
@@ -318,6 +180,27 @@ function App() {
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [is3D, setIs3D] = useState(false);
+
+  // Extracted evidence. Verdicts are always recomputed from this, never stored.
+  const [planFacts, setPlanFacts] = useState<PlanFacts>({});
+  const [factProvider, setFactProvider] = useState('Local deterministic engine');
+  const [engineNotes, setEngineNotes] = useState<string[]>([]);
+  const [report, setReport] = useState<ComplianceReport | null>(null);
+  const [isSampleData, setIsSampleData] = useState(false);
+
+  // 3D reconstruction of the uploaded 2D sheet.
+  const [fileData, setFileData] = useState('');
+  const [planModel, setPlanModel] = useState<PlanModel | null>(null);
+  const [planStatus, setPlanStatus] = useState<'idle' | 'building' | 'ready'>('idle');
+  const [holoOptions, setHoloOptions] = useState({
+    labels: true,
+    markers: true,
+    blueprint: true,
+    wireframe: false,
+    autoRotate: true,
+    explode: 0,
+  });
+
   const [selectedRuleId, setSelectedRuleId] = useState<string>('GH-DCR-01');
   const [ruleFilter, setRuleFilter] = useState<'ALL' | 'PASS' | 'FAIL'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -462,6 +345,68 @@ function App() {
     [jurisdiction],
   );
 
+  /**
+   * Runs the deterministic engine over a fact set and publishes the result.
+   *
+   * This is the ONLY path that produces a verdict in the UI. Nothing merges a
+   * server-authored Pass/Fail any more — the server supplies evidence, this
+   * computes the finding. Two devices with the same evidence therefore show
+   * the same counts, and `report.digest` proves it.
+   */
+  const applyFacts = (
+    facts: PlanFacts,
+    meta: { documentName: string; documentSize: string; provider: string; notes: string[] },
+  ) => {
+    const packs = (Object.keys(rulePacks) as PackId[]).filter((key) => rulePacks[key]);
+    const nextReport = evaluateCompliance(facts, { jurisdiction, packs });
+    const ruleResults = withPins(nextReport.ruleResults) as unknown as RuleResult[];
+
+    setPlanFacts(facts);
+    setFactProvider(meta.provider);
+    setEngineNotes(meta.notes);
+    setReport(nextReport);
+    setAnalysis({
+      documentName: meta.documentName,
+      documentSize: meta.documentSize,
+      jurisdiction: activeJurisdiction.label,
+      score: nextReport.summary.score,
+      coverage: nextReport.summary.coverage,
+      risk: nextReport.summary.risk,
+      status: nextReport.summary.status,
+      summary: [
+        `${nextReport.summary.pass} pass, ${nextReport.summary.fail} fail, ${nextReport.summary.missing} not readable across ${nextReport.summary.checked} statutory checks.`,
+        `Evaluated against ${activeJurisdiction.label} using knowledge base ${nextReport.kbVersion}.`,
+        ...meta.notes,
+      ].join(' '),
+      ruleResults,
+      violations: violationsFromReport(nextReport) as unknown as Violation[],
+      totalPages: 1,
+    });
+
+    const firstFinding =
+      ruleResults.find((rule) => rule.status === 'Fail') ?? ruleResults[0];
+    if (firstFinding) setSelectedRuleId(firstFinding.id);
+  };
+
+  /** True once an evaluation exists, whether from an upload or the sample set. */
+  const hasResult = state === 'complete';
+
+  /** Loads the labelled sample project through the real engine. */
+  const loadSampleProject = () => {
+    setFile(null);
+    setPlanModel(synthesizePlanModel(SAMPLE_PROJECT_LABEL, { plotWidth: 30, plotDepth: 40, levels: 6 }));
+    setPlanStatus('ready');
+    setIsSampleData(true);
+    applyFacts(SAMPLE_PROJECT_FACTS, {
+      documentName: SAMPLE_PROJECT_LABEL,
+      documentSize: 'Sample dataset — not an uploaded drawing',
+      provider: 'Sample dataset',
+      notes: ['These are sample measurements, not a read of a real drawing. Verdicts below are computed by the live rule engine.'],
+    });
+    setState('complete');
+    handleNavigate('workspace');
+  };
+
   const isRulePass = (r: RuleResult) => {
     const s = String(r.status || '').trim().toLowerCase();
     return s === 'pass' || s === 'compliant' || s === 'ok' || s === 'correct' || s === 'verified';
@@ -479,13 +424,21 @@ function App() {
   const filteredRules = useMemo(() => {
     return analysis.ruleResults.filter((r) => {
       if (ruleFilter === 'PASS') return isRulePass(r);
-      if (ruleFilter === 'FAIL') return isRuleFail(r) || !isRulePass(r);
+      if (ruleFilter === 'FAIL') return isRuleFail(r);
       return true;
     });
   }, [analysis.ruleResults, ruleFilter]);
 
   const passCount = useMemo(() => analysis.ruleResults.filter((r) => isRulePass(r)).length, [analysis.ruleResults]);
-  const failCount = useMemo(() => analysis.ruleResults.filter((r) => isRuleFail(r) || !isRulePass(r)).length, [analysis.ruleResults]);
+  // A rule we could not read is NOT a violation. Conflating the two was
+  // reporting unreadable drawings as high-risk non-compliant buildings.
+  const failCount = useMemo(() => analysis.ruleResults.filter((r) => isRuleFail(r)).length, [analysis.ruleResults]);
+  const missingCount = useMemo(
+    () => analysis.ruleResults.filter((r) => !isRulePass(r) && !isRuleFail(r)).length,
+    [analysis.ruleResults],
+  );
+  /** Rules the engine could actually decide — the honest denominator for a score. */
+  const decidedCount = passCount + failCount;
 
   const askAiAboutRule = (rule: RuleResult) => {
     const question = `How do I fix or comply with rule ${rule.id} (${rule.title}: ${rule.current} vs required ${rule.required}) under ${rule.clause || activeJurisdiction.label}?`;
@@ -554,6 +507,9 @@ function App() {
       setPreviewUrl('');
       setAnalysis({ ...emptyAnalysis, jurisdiction: activeJurisdiction.label });
       setState('idle');
+      setFileData('');
+      setPlanModel(null);
+      setPlanStatus('idle');
       return;
     }
 
@@ -563,62 +519,113 @@ function App() {
 
     let isCancelled = false;
     const reader = new FileReader();
+
     reader.onload = async (e) => {
       if (isCancelled) return;
-      try {
-        const base64 = e.target?.result as string;
-        const res = await fetch('/api/analyze-file', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: file.name,
-            size: file.size,
-            type: file.type,
-            base64: base64,
-            jurisdiction: activeJurisdiction.label,
-            rulePacks: Object.keys(rulePacks).filter((k) => (rulePacks as any)[k]),
-          })
-        });
-        
-        if (!res.ok) throw new Error("API failed");
-        const data = await res.json();
-        
-        if (!isCancelled) {
-          const generated = makeAnalysis(file, activeJurisdiction.label);
-          const finalRules = data.ruleResults && data.ruleResults.length > 0 ? data.ruleResults : generated.ruleResults;
-          setAnalysis({
-            ...generated,
-            ...data,
-            documentName: file.name,
-            documentSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-            jurisdiction: activeJurisdiction.label,
-            ruleResults: finalRules,
-            violations: data.violations && data.violations.length > 0 ? data.violations : generated.violations,
+      const base64 = (e.target?.result as string) || '';
+      setFileData(base64);
+      setPlanStatus('building');
+
+      const request = {
+        filename: file.name,
+        size: file.size,
+        mimeType: file.type,
+        type: file.type,
+        base64,
+      };
+
+      const post = async (path: string, body: unknown) => {
+        try {
+          const response = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
           });
-          if (finalRules.length > 0) {
-            setSelectedRuleId(finalRules[0].id);
-          }
-          setState('complete');
+          if (!response.ok) return null;
+          return await response.json();
+        } catch {
+          // Offline or no local API server — the deterministic path still runs.
+          return null;
         }
-      } catch (err) {
-        if (!isCancelled) {
-          const generated = makeAnalysis(file, activeJurisdiction.label);
-          setAnalysis(generated);
-          setSelectedRuleId(generated.ruleResults[0].id);
-          setState('complete');
-        }
+      };
+
+      // Facts and geometry are independent reads of the same sheet.
+      const [factsResponse, geometryResponse] = await Promise.all([
+        post('/api/extract-facts', request),
+        post('/api/extract-plan', { ...request, hints: {} }),
+      ]);
+      if (isCancelled) return;
+
+      /* ---- 3D model ---- */
+      const seed = `${file.name}:${file.size}`;
+      const visionModel = geometryResponse?.model
+        ? normalizePlanModel(geometryResponse.model, {
+            providerMessage: geometryResponse.provider || 'Vision geometry',
+          })
+        : null;
+      const model = visionModel ?? synthesizePlanModel(seed);
+
+      /* ---- Facts, weakest source first ---- */
+      let facts: PlanFacts = factsFromText(factsResponse?.sheetText || '');
+      // Only a genuine vision trace may feed statutory facts. Synthesised
+      // geometry is a visual aid, not evidence about this building.
+      if (visionModel) facts = mergeFacts(facts, factsFromGeometry(visionModel));
+      if (factsResponse?.facts) facts = mergeFacts(facts, factsFromVision(factsResponse.facts));
+
+      const notes: string[] = [];
+      if (factsResponse?.error) notes.push(factsResponse.error);
+      if (factsResponse?.textExtractionNote) notes.push(factsResponse.textExtractionNote);
+      if (!factsResponse) {
+        notes.push('Fact extraction service unreachable — only locally derivable evidence was used.');
       }
+
+      applyFacts(facts, {
+        documentName: file.name,
+        documentSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        provider: factsResponse?.provider || 'Local deterministic engine',
+        notes,
+      });
+
+      setPlanModel(model);
+      setPlanStatus('ready');
+      setState('complete');
     };
+
     reader.readAsDataURL(file);
 
     return () => {
       isCancelled = true;
       URL.revokeObjectURL(url);
     };
-  }, [file, activeJurisdiction.label, rulePacks]);
+  }, [file]);
+
+  /** Re-evaluates in place when the operator changes jurisdiction or rule packs. */
+  useEffect(() => {
+    if (state !== 'complete') return;
+    applyFacts(planFacts, {
+      documentName: analysis.documentName,
+      documentSize: analysis.documentSize,
+      provider: factProvider,
+      notes: engineNotes,
+    });
+    // Facts are unchanged here; only the statutory lens moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeJurisdiction.id, rulePacks]);
+
+  /** Attaches violation beacons to the hologram once both halves exist. */
+  useEffect(() => {
+    if (!planModel) return;
+    const markers = markersFromAnalysis(planModel, analysis.ruleResults);
+    const unchanged =
+      markers.length === planModel.markers.length &&
+      markers.every((marker, index) => marker.id === planModel.markers[index]?.id);
+    if (unchanged) return;
+    setPlanModel({ ...planModel, markers });
+  }, [planModel, analysis.ruleResults]);
 
   const acceptFile = (nextFile?: File) => {
     if (!nextFile) return;
+    setIsSampleData(false);
     setFile(nextFile);
     handleNavigate('workspace');
     setCurrentPage(1);
@@ -946,28 +953,54 @@ function App() {
                           analysis={analysis}
                           onSelectRule={handleSelectRule}
                         />
+                      ) : isSampleData ? (
+                        <div className="relative inline-block w-full h-full max-h-[620px]">
+                          <CadBlueprintGraphic filename={SAMPLE_PROJECT_LABEL} />
+                        </div>
                       ) : (
-                        <UploadEmptyState onChoose={() => inputRef.current?.click()} isDragging={isDragging} />
+                        <UploadEmptyState
+                          onChoose={() => inputRef.current?.click()}
+                          isDragging={isDragging}
+                          onLoadSample={loadSampleProject}
+                        />
                       )}
                     </div>
 
-                    {/* 3D Model Extrusion Wireframe */}
-                    <div className="holo-building">
-                      <div className="holo-wall wall-f" />
-                      <div className="holo-wall wall-b" />
-                      <div className="holo-wall wall-l" />
-                      <div className="holo-wall wall-r" />
-                      <div className="holo-floor floor-2" />
-                      <div className="holo-wall wall-f2" />
-                      <div className="holo-wall wall-b2" />
-                      <div className="holo-wall wall-l2" />
-                      <div className="holo-wall wall-r2" />
-                      <div className="holo-roof roof-l" />
-                      <div className="holo-roof roof-r" />
-                      <div className="holo-gable gable-f" />
-                      <div className="holo-gable gable-b" />
-                    </div>
                   </div>
+
+                  {/* Reconstructed holographic building model */}
+                  {is3D && (file || isSampleData) && (
+                    <div
+                      className="absolute inset-0 z-20 holo-stage"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onMouseMove={(e) => e.stopPropagation()}
+                      onMouseUp={(e) => e.stopPropagation()}
+                      onWheel={(e) => e.stopPropagation()}
+                    >
+                      {planModel ? (
+                        <HolographicPlanViewer
+                          model={planModel}
+                          blueprintUrl={previewUrl}
+                          showBlueprint={holoOptions.blueprint}
+                          showLabels={holoOptions.labels}
+                          showMarkers={holoOptions.markers}
+                          wireframe={holoOptions.wireframe}
+                          autoRotate={holoOptions.autoRotate}
+                          explode={holoOptions.explode}
+                        />
+                      ) : (
+                        <HoloBuildingState status={planStatus} />
+                      )}
+
+                      {planModel && (
+                        <HoloOverlay
+                          model={planModel}
+                          options={holoOptions}
+                          onChange={(next) => setHoloOptions((prev) => ({ ...prev, ...next }))}
+                        />
+                      )}
+                    </div>
+                  )}
 
                   {/* Dynamic Ruler Measurement Line Overlay */}
                   {measureLine && (
@@ -1082,7 +1115,7 @@ function App() {
                     </span>
                   </div>
                   <span className={`font-mono text-[11px] font-extrabold uppercase px-3 py-1 rounded-full border shadow-lg flex items-center gap-1.5 ${
-                    !file
+                    !hasResult || decidedCount === 0
                       ? 'bg-white/10 border-white/20 text-white'
                       : failCount === 0
                       ? 'bg-[#27c93f]/25 border-[#27c93f] text-[#27c93f] shadow-[#27c93f]/20'
@@ -1090,8 +1123,8 @@ function App() {
                       ? 'bg-[#f26a3d]/25 border-[#f26a3d] text-[#f26a3d] shadow-[#f26a3d]/20'
                       : 'bg-[#ff4d4d]/25 border-[#ff4d4d] text-[#ff4d4d] shadow-[#ff4d4d]/20 animate-pulse'
                   }`}>
-                    <span className={`h-2 w-2 rounded-full animate-ping ${!file ? 'bg-white' : failCount === 0 ? 'bg-[#27c93f]' : 'bg-[#ff4d4d]'}`} />
-                    {file ? 'ACTIVE AUDIT' : 'STANDBY'}
+                    <span className={`h-2 w-2 rounded-full animate-ping ${!hasResult ? 'bg-white' : failCount === 0 ? 'bg-[#27c93f]' : 'bg-[#ff4d4d]'}`} />
+                    {hasResult ? 'ACTIVE AUDIT' : 'STANDBY'}
                   </span>
                 </div>
 
@@ -1104,21 +1137,25 @@ function App() {
                     </span>
                     <div className="flex items-baseline gap-1.5 my-1.5">
                       <span className="font-space text-4xl font-black text-white tracking-tight drop-shadow-md">
-                        {file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%
+                        {hasResult && decidedCount > 0
+                          ? `${Math.round((passCount / decidedCount) * 100)}%`
+                          : '—'}
                       </span>
-                      <span className="font-mono text-[10px] font-extrabold text-[#27c93f] tracking-wide">ACCURACY</span>
+                      <span className="font-mono text-[10px] font-extrabold text-[#27c93f] tracking-wide">
+                        {decidedCount > 0 ? `OF ${decidedCount} DECIDED` : 'NO READABLE EVIDENCE'}
+                      </span>
                     </div>
                     {/* Glowing Progress Bar */}
                     <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden mt-1">
                       <div
                         className={`h-full transition-all duration-1000 ease-out ${
-                          !file || failCount === 0
+                          !hasResult || failCount === 0
                             ? 'bg-[#27c93f] shadow-[0_0_12px_#27c93f]'
                             : failCount <= 2
                             ? 'bg-[#f26a3d] shadow-[0_0_12px_#f26a3d]'
                             : 'bg-[#ff4d4d] shadow-[0_0_12px_#ff4d4d]'
                         }`}
-                        style={{ width: `${file ? Math.round((passCount / Math.max(1, analysis.ruleResults.length)) * 100) : 0}%` }}
+                        style={{ width: `${hasResult && decidedCount > 0 ? Math.round((passCount / decidedCount) * 100) : 0}%` }}
                       />
                     </div>
                   </div>
@@ -1138,11 +1175,21 @@ function App() {
                           ? 'bg-[#f26a3d]/25 border-[#f26a3d] text-[#f26a3d]'
                           : 'bg-[#ff4d4d]/25 border-[#ff4d4d] text-[#ff4d4d] animate-pulse'
                       }`}>
-                        {!file ? 'NONE' : failCount === 0 ? 'LOW RISK' : failCount <= 2 ? 'MODERATE' : 'HIGH RISK'}
+                        {!hasResult
+                          ? 'NONE'
+                          : decidedCount === 0
+                          ? 'INCOMPLETE'
+                          : failCount === 0
+                          ? 'LOW RISK'
+                          : failCount <= 2
+                          ? 'MODERATE'
+                          : 'HIGH RISK'}
                       </span>
                     </div>
                     <span className="font-mono text-[11px] text-white font-bold">
-                      {file ? `${failCount} Violation${failCount !== 1 ? 's' : ''} detected` : 'Upload drawing'}
+                      {hasResult
+                        ? `${failCount} violation${failCount !== 1 ? 's' : ''}, ${missingCount} unread`
+                        : 'Upload drawing'}
                     </span>
                   </div>
                 </div>
@@ -1156,6 +1203,8 @@ function App() {
                   <span className="text-[#81b7c2] font-extrabold">{analysis.ruleResults.length} Statutory Rules Evaluated</span>
                 </div>
               </div>
+
+              {report && <EvidenceLedger report={report} provider={factProvider} notes={engineNotes} isSample={isSampleData} />}
 
               {/* STATUTORY REGULATION AUDIT CENTER PANEL */}
               <div className="flex flex-col gap-3">
@@ -2228,7 +2277,15 @@ function AIChatDrawer({
   );
 }
 
-function UploadEmptyState({ onChoose, isDragging }: { onChoose: () => void; isDragging: boolean }) {
+function UploadEmptyState({
+  onChoose,
+  isDragging,
+  onLoadSample,
+}: {
+  onChoose: () => void;
+  isDragging: boolean;
+  onLoadSample: () => void;
+}) {
   return (
     <div className="flex h-full items-center justify-center p-6 text-center">
       <div className="max-w-sm flex flex-col items-center">
@@ -2254,6 +2311,17 @@ function UploadEmptyState({ onChoose, isDragging }: { onChoose: () => void; isDr
           <Upload size={14} />
           <span>Choose File</span>
         </button>
+
+        <button
+          type="button"
+          onClick={onLoadSample}
+          className="mt-3 font-mono text-[10px] uppercase tracking-wider text-[#81b7c2] underline underline-offset-4 hover:text-[#f26a3d] transition"
+        >
+          or load the sample dataset
+        </button>
+        <p className="mt-1.5 font-mono text-[9px] text-[#5f6c70]">
+          Illustrative measurements, scored by the live rule engine.
+        </p>
       </div>
     </div>
   );

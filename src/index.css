@@ -400,66 +400,35 @@
   transition: transform 0.05s linear;
 }
 
-.holo-building {
+/* WebGL hologram stage — the reconstructed 3D model of the uploaded drawing */
+.holo-stage {
+  animation: holo-stage-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background:
+    radial-gradient(ellipse at 50% 55%, rgba(242, 106, 61, 0.09), transparent 62%),
+    radial-gradient(ellipse at 50% 100%, rgba(129, 183, 194, 0.07), transparent 55%);
+}
+
+/* Faint CRT interference over the whole projection. */
+.holo-stage::after {
+  content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 300px;
-  height: 240px;
-  transform: translate3d(-50%, -50%, 0px);
-  transform-style: preserve-3d;
+  inset: 0;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-  z-index: 100;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(129, 183, 194, 0.05) 0px,
+    rgba(129, 183, 194, 0.05) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+  opacity: 0.5;
 }
 
-.mode-3d .holo-building {
-  opacity: 0.95;
+@keyframes holo-stage-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
-
-.holo-wall, .holo-roof, .holo-floor, .holo-gable {
-  position: absolute;
-  background: rgba(242, 106, 61, 0.08);
-  border: 1.5px solid #f26a3d;
-  box-shadow: 0 0 15px rgba(242, 106, 61, 0.3), inset 0 0 15px rgba(242, 106, 61, 0.15);
-  transform-style: preserve-3d;
-}
-
-.wall-f { bottom: 0; left: 0; right: 0; height: 80px; transform-origin: bottom; transform: rotateX(-90deg); }
-.wall-b { top: 0; left: 0; right: 0; height: 80px; transform-origin: top; transform: rotateX(90deg); }
-.wall-l { top: 0; bottom: 0; left: 0; width: 80px; transform-origin: left; transform: rotateY(-90deg); }
-.wall-r { top: 0; bottom: 0; right: 0; width: 80px; transform-origin: right; transform: rotateY(90deg); }
-
-.floor-2 { inset: 0; transform: translateZ(80px); background: rgba(242, 106, 61, 0.15); }
-
-.wall-f2 { bottom: 0; left: 0; right: 0; height: 80px; transform-origin: bottom; transform: translateZ(80px) rotateX(-90deg); }
-.wall-b2 { top: 0; left: 0; right: 0; height: 80px; transform-origin: top; transform: translateZ(80px) rotateX(90deg); }
-.wall-l2 { top: 0; bottom: 0; left: 0; width: 80px; transform-origin: left; transform: translateZ(80px) rotateY(-90deg); }
-.wall-r2 { top: 0; bottom: 0; right: 0; width: 80px; transform-origin: right; transform: translateZ(80px) rotateY(90deg); }
-
-.roof-l {
-  top: 0; bottom: 0; left: 0; width: 158px;
-  transform-origin: left;
-  transform: translateZ(160px) rotateY(18.4deg);
-  background: rgba(242, 106, 61, 0.15);
-  border: 1.5px solid #f26a3d;
-}
-.roof-r {
-  top: 0; bottom: 0; right: 0; width: 158px;
-  transform-origin: right;
-  transform: translateZ(160px) rotateY(-18.4deg);
-  background: rgba(242, 106, 61, 0.15);
-  border: 1.5px solid #f26a3d;
-}
-
-.holo-gable {
-  height: 50px;
-  background: rgba(242, 106, 61, 0.08);
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-}
-.gable-f { bottom: 0; left: 0; right: 0; transform-origin: bottom; transform: translateZ(160px) rotateX(-90deg); }
-.gable-b { top: 0; left: 0; right: 0; transform-origin: top; transform: translateZ(160px) rotateX(90deg); }
 
 .mode-3d .preview {
   opacity: 0 !important;
