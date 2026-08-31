@@ -48,7 +48,7 @@ import { ThreeBuildingBackground } from './components/ThreeBuildingBackground';
 import { InteractiveWorkflowSimulator } from './components/InteractiveWorkflowSimulator';
 import { InteractiveBylawTester } from './components/InteractiveBylawTester';
 import { HolographicPlanViewer } from './components/HolographicPlanViewer';
-import { HoloBuildingState, HoloOverlay } from './components/HoloOverlay';
+import { HoloBuildingState, HoloOverlay, type HoloOptions } from './components/HoloOverlay';
 import { EvidenceLedger } from './components/EvidenceLedger';
 import {
   markersFromAnalysis,
@@ -204,13 +204,14 @@ function App() {
   const [fileData, setFileData] = useState('');
   const [planModel, setPlanModel] = useState<PlanModel | null>(null);
   const [planStatus, setPlanStatus] = useState<'idle' | 'building' | 'ready'>('idle');
-  const [holoOptions, setHoloOptions] = useState({
+  const [holoOptions, setHoloOptions] = useState<HoloOptions>({
     labels: true,
     markers: true,
     blueprint: true,
     wireframe: false,
     autoRotate: true,
     explode: 0,
+    activeLevel: null,
   });
 
   const [selectedRuleId, setSelectedRuleId] = useState<string>('GH-DCR-01');
@@ -662,6 +663,14 @@ function App() {
     setPlanModel({ ...planModel, markers });
   }, [planModel, analysis.ruleResults]);
 
+  /** A new building may be shorter than the one whose storey was isolated. */
+  useEffect(() => {
+    const levels = planModel?.levels ?? 0;
+    setHoloOptions((prev) =>
+      prev.activeLevel !== null && prev.activeLevel >= levels ? { ...prev, activeLevel: null } : prev
+    );
+  }, [planModel?.levels]);
+
   const acceptFile = (nextFile?: File) => {
     if (!nextFile) return;
     setIsSampleData(false);
@@ -1044,6 +1053,7 @@ function App() {
                           wireframe={holoOptions.wireframe}
                           autoRotate={holoOptions.autoRotate}
                           explode={holoOptions.explode}
+                          activeLevel={holoOptions.activeLevel}
                         />
                       ) : (
                         <HoloBuildingState status={planStatus} />

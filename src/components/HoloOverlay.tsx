@@ -1,5 +1,5 @@
-import { Box, Eye, Grid3x3, Layers, Map, RotateCw, Tag } from 'lucide-react';
-import { planStats, type PlanModel } from '../lib/planModel';
+import { Box, ChevronDown, ChevronUp, Eye, Grid3x3, Layers, Map, RotateCw, Tag } from 'lucide-react';
+import { levelStats, planStats, type PlanModel } from '../lib/planModel';
 
 export type HoloOptions = {
   labels: boolean;
@@ -8,6 +8,8 @@ export type HoloOptions = {
   wireframe: boolean;
   autoRotate: boolean;
   explode: number;
+  /** Isolated storey index, or null for the whole stack. */
+  activeLevel: number | null;
 };
 
 /** Materialising / reconstruction placeholder shown before geometry arrives. */
@@ -70,7 +72,17 @@ export function HoloOverlay({
   onChange: (next: Partial<HoloOptions>) => void;
 }) {
   const stats = planStats(model);
+  const storeys = levelStats(model);
   const isAi = model.source === 'ai';
+  const active = options.activeLevel;
+  const activeStorey = active === null ? null : storeys[active] ?? null;
+
+  /** Steps the isolated storey, clamped to the stack. */
+  const step = (delta: number) => {
+    const next = (active === null ? 0 : active) + delta;
+    if (next < 0 || next >= storeys.length) return;
+    onChange({ activeLevel: next });
+  };
 
   return (
     <>
@@ -84,6 +96,11 @@ export function HoloOverlay({
             {isAi ? 'Vision-traced model' : 'Derived model'}
           </span>
         </div>
+        {isAi && (
+          <p className="mt-1 font-mono text-[10px] text-[#81b7c2]">
+            Traced from: <span className="font-bold">{model.sourcePanel}</span>
+          </p>
+        )}
         <p className="mt-1.5 font-mono text-[10px] leading-relaxed text-[#8c999c]">
           {model.providerMessage}
         </p>
@@ -144,24 +161,97 @@ export function HoloOverlay({
           />
         </div>
 
-        {model.levels > 1 && (
-          <div className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#08090a]/90 px-2.5 py-1.5 backdrop-blur-md">
-            <Layers size={12} className="text-[#81b7c2]" />
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={options.explode}
-              onChange={(event) => onChange({ explode: Number(event.target.value) })}
-              className="h-1 w-24 accent-[#f26a3d] cursor-pointer"
-              title="Explode storeys"
-            />
-            <span className="font-mono text-[10px] font-bold text-[#f26a3d] w-8 text-right">
-              {Math.round(options.explode * 100)}%
+        {/* Storey selector — the stack drawn top-down, as on a section sheet. */}
+        <div className="rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#08090a]/90 p-1.5 backdrop-blur-md">
+          <div className="mb-1 flex items-center justify-between gap-2 px-0.5">
+            <span className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#5f6c70]">
+              Storeys
             </span>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => step(1)}
+                disabled={active !== null && active >= storeys.length - 1}
+                title="Storey up"
+                className="rounded border border-[rgba(255,255,255,0.14)] p-0.5 text-[#8c999c] transition hover:border-[#81b7c2] hover:text-[#81b7c2] disabled:opacity-30 disabled:hover:border-[rgba(255,255,255,0.14)] disabled:hover:text-[#8c999c]"
+              >
+                <ChevronUp size={11} />
+              </button>
+              <button
+                type="button"
+                onClick={() => step(-1)}
+                disabled={active === null || active <= 0}
+                title="Storey down"
+                className="rounded border border-[rgba(255,255,255,0.14)] p-0.5 text-[#8c999c] transition hover:border-[#81b7c2] hover:text-[#81b7c2] disabled:opacity-30 disabled:hover:border-[rgba(255,255,255,0.14)] disabled:hover:text-[#8c999c]"
+              >
+                <ChevronDown size={11} />
+              </button>
+            </div>
           </div>
-        )}
+
+          <div className="flex max-h-44 flex-col gap-1 overflow-y-auto pr-0.5">
+            {[...storeys].reverse().map((storey) => {
+              const isActive = active === storey.level;
+              return (
+                <button
+                  key={storey.level}
+                  type="button"
+                  // Clicking the isolated storey again returns to the full stack.
+                  onClick={() => onChange({ activeLevel: isActive ? null : storey.level })}
+                  title={`${storey.rooms} rooms · ${storey.walls} walls · +${storey.elevation.toFixed(2)} m`}
+                  className={`flex items-center justify-between gap-3 rounded-md border px-2 py-1 font-mono text-[10px] transition ${
+                    isActive
+                      ? 'border-[#f26a3d] bg-[#f26a3d]/15 text-[#f26a3d]'
+                      : 'border-[rgba(255,255,255,0.12)] text-[#8c999c] hover:border-[#81b7c2] hover:text-[#81b7c2]'
+                  }`}
+                >
+                  <span className="font-bold uppercase tracking-wider">{storey.label}</span>
+                  <span className="tabular-nums opacity-80">{storey.area.toFixed(0)} m²</span>
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => onChange({ activeLevel: null })}
+              title="Show the whole stack"
+              className={`flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider transition ${
+                active === null
+                  ? 'border-[#81b7c2] bg-[#81b7c2]/15 text-[#81b7c2]'
+                  : 'border-[rgba(255,255,255,0.12)] text-[#8c999c] hover:border-[#81b7c2] hover:text-[#81b7c2]'
+              }`}
+            >
+              <Layers size={11} />
+              <span>All {model.levels}</span>
+            </button>
+          </div>
+
+          {activeStorey && (
+            <p className="mt-1 px-0.5 font-mono text-[9px] text-[#5f6c70]">
+              {activeStorey.rooms} rooms · {activeStorey.openings} openings · +
+              {activeStorey.elevation.toFixed(2)} m
+            </p>
+          )}
+
+          {model.levels > 1 && (
+            <div className="mt-1.5 flex items-center gap-2 border-t border-[rgba(255,255,255,0.08)] px-0.5 pt-1.5">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-[#5f6c70]">Split</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={options.explode}
+                onChange={(event) => onChange({ explode: Number(event.target.value) })}
+                className="h-1 flex-1 accent-[#f26a3d] cursor-pointer"
+                title="Explode storeys"
+              />
+              <span className="w-8 text-right font-mono text-[10px] font-bold text-[#f26a3d]">
+                {Math.round(options.explode * 100)}%
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {model.notes.length > 0 && (

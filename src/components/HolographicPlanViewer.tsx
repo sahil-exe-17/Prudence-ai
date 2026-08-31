@@ -23,6 +23,8 @@ type ViewerProps = {
   autoRotate?: boolean;
   /** 0 = stacked storeys, 1 = fully exploded axonometric. */
   explode?: number;
+  /** Storey to isolate — the rest ghost back. null shows the whole stack. */
+  activeLevel?: number | null;
   className?: string;
 };
 
@@ -68,7 +70,7 @@ const HOLO_FRAGMENT = /* glsl */ `
 `;
 
 function makeHoloMaterial(color: number, accent: number, opacity: number) {
-  return new THREE.ShaderMaterial({
+  const material = new THREE.ShaderMaterial({
     uniforms: {
       uColor: { value: new THREE.Color(color) },
       uAccent: { value: new THREE.Color(accent) },
@@ -83,6 +85,15 @@ function makeHoloMaterial(color: number, accent: number, opacity: number) {
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
   });
+  // Remembered so a ghosted storey can be faded back to its own full strength.
+  material.userData.baseOpacity = opacity;
+  return material;
+}
+
+function makeEdgeMaterial(color: number, opacity: number) {
+  const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+  material.userData.baseOpacity = opacity;
+  return material;
 }
 
 /* ------------------------------------------------------------------ *
@@ -180,14 +191,31 @@ export function HolographicPlanViewer({
   wireframe = false,
   autoRotate = true,
   explode = 0,
+  activeLevel = null,
   className,
 }: ViewerProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
 
   // Live prop mirrors so the animation loop reads current values without
   // tearing down and rebuilding the whole scene on every toggle.
-  const optionsRef = useRef({ showLabels, showMarkers, wireframe, autoRotate, explode, showBlueprint });
-  optionsRef.current = { showLabels, showMarkers, wireframe, autoRotate, explode, showBlueprint };
+  const optionsRef = useRef({
+    showLabels,
+    showMarkers,
+    wireframe,
+    autoRotate,
+    explode,
+    showBlueprint,
+    activeLevel,
+  });
+  optionsRef.current = {
+    showLabels,
+    showMarkers,
+    wireframe,
+    autoRotate,
+    explode,
+    showBlueprint,
+    activeLevel,
+  };
 
   useEffect(() => {
     const container = mountRef.current;
@@ -233,16 +261,38 @@ export function HolographicPlanViewer({
     const unitBox = track(new THREE.BoxGeometry(1, 1, 1));
     const unitEdges = track(new THREE.EdgesGeometry(unitBox));
 
-    const exteriorMaterial = track(makeHoloMaterial(BRAND, 0xffd7c4, 0.95));
-    const interiorMaterial = track(makeHoloMaterial(CYAN, 0xdff4f8, 0.7));
-    const holoMaterials = [exteriorMaterial, interiorMaterial];
+    // Every storey owns its materials, which is what lets one floor stay solid
+    // while the rest of the stack ghosts back to a faint context frame.
+    type LevelMaterials = {
+      exterior: THREE.ShaderMaterial;
+      interior: THREE.ShaderMaterial;
+      slab: THREE.ShaderMaterial;
+      roomFill: THREE.ShaderMaterial;
+      exteriorEdge: THREE.LineBasicMaterial;
+      interiorEdge: THREE.LineBasicMaterial;
+      all: (THREE.ShaderMaterial | THREE.LineBasicMaterial)[];
+    };
 
-    const exteriorEdgeMaterial = track(
-      new THREE.LineBasicMaterial({ color: BRAND, transparent: true, opacity: 0.95 })
-    );
-    const interiorEdgeMaterial = track(
-      new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.6 })
-    );
+    const holoMaterials: THREE.ShaderMaterial[] = [];
+    const makeLevelMaterials = (): LevelMaterials => {
+      const exterior = track(makeHoloMaterial(BRAND, 0xffd7c4, 0.95));
+      const interior = track(makeHoloMaterial(CYAN, 0xdff4f8, 0.7));
+      const slab = track(makeHoloMaterial(BRAND, 0xffffff, 0.45));
+      const roomFill = track(makeHoloMaterial(CYAN, 0xffffff, 0.22));
+      const exteriorEdge = track(makeEdgeMaterial(BRAND, 0.95));
+      const interiorEdge = track(makeEdgeMaterial(CYAN, 0.6));
+      holoMaterials.push(exterior, interior, slab, roomFill);
+      return {
+        exterior,
+        interior,
+        slab,
+        roomFill,
+        exteriorEdge,
+        interiorEdge,
+        all: [exterior, interior, slab, roomFill, exteriorEdge, interiorEdge],
+      };
+    };
+    const levelMaterials: LevelMaterials[] = [];
 
     /* --- ground: grid, plot boundary, setback envelope -------------- */
 
@@ -331,11 +381,6 @@ export function HolographicPlanViewer({
     const levelGroups: LevelGroup[] = [];
     const risers: { mesh: THREE.Object3D; target: number; delay: number }[] = [];
 
-    const slabMaterial = track(makeHoloMaterial(BRAND, 0xffffff, 0.45));
-    holoMaterials.push(slabMaterial);
-    const roomFillMaterial = track(makeHoloMaterial(CYAN, 0xffffff, 0.22));
-    holoMaterials.push(roomFillMaterial);
-
     const openingsByWall = new Map<number, { t: number; width: number; height: number; sill: number }[]>();
     for (const opening of model.openings) {
       const list = openingsByWall.get(opening.wall) || [];
@@ -345,6 +390,8 @@ export function HolographicPlanViewer({
 
     let wallOrdinal = 0;
     for (let level = 0; level < levels; level += 1) {
+      const materials = makeLevelMaterials();
+      levelMaterials.push(materials);
       const group = new THREE.Group();
       const baseY = level * floorHeight;
       group.position.y = baseY;
@@ -363,7 +410,7 @@ export function HolographicPlanViewer({
           }),
           { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
         );
-        const slab = new THREE.Mesh(unitBox, slabMaterial);
+        const slab = new THREE.Mesh(unitBox, materials.slab);
         slab.scale.set(
           Math.max(0.5, bounds.maxX - bounds.minX) + 0.4,
           0.12,
@@ -373,7 +420,7 @@ export function HolographicPlanViewer({
         slab.position.set(centre.x, 0.06, centre.z);
         group.add(slab);
 
-        const slabEdge = new THREE.LineSegments(unitEdges, exteriorEdgeMaterial);
+        const slabEdge = new THREE.LineSegments(unitEdges, materials.exteriorEdge);
         slabEdge.scale.copy(slab.scale);
         slabEdge.position.copy(slab.position);
         group.add(slabEdge);
@@ -389,7 +436,7 @@ export function HolographicPlanViewer({
         });
         shape.closePath();
         const geometry = track(new THREE.ShapeGeometry(shape));
-        const fill = new THREE.Mesh(geometry, roomFillMaterial);
+        const fill = new THREE.Mesh(geometry, materials.roomFill);
         fill.rotation.x = Math.PI / 2;
         fill.position.y = 0.14;
         group.add(fill);
@@ -417,13 +464,16 @@ export function HolographicPlanViewer({
           const px = start.x + dirX * centreU;
           const pz = start.z + dirZ * centreU;
 
-          const mesh = new THREE.Mesh(unitBox, isExterior ? exteriorMaterial : interiorMaterial);
+          const mesh = new THREE.Mesh(unitBox, isExterior ? materials.exterior : materials.interior);
           mesh.scale.set(piece.du, piece.dv, wall.thickness);
           mesh.position.set(px, 0.12 + piece.v + piece.dv / 2, pz);
           mesh.rotation.y = -angle;
           wallGroup.add(mesh);
 
-          const edge = new THREE.LineSegments(unitEdges, isExterior ? exteriorEdgeMaterial : interiorEdgeMaterial);
+          const edge = new THREE.LineSegments(
+            unitEdges,
+            isExterior ? materials.exteriorEdge : materials.interiorEdge
+          );
           edge.scale.copy(mesh.scale);
           edge.position.copy(mesh.position);
           edge.rotation.y = mesh.rotation.y;
@@ -618,6 +668,8 @@ export function HolographicPlanViewer({
         material.uniforms.uSweep.value = sweepY;
       }
 
+      const isolated = typeof options.activeLevel === 'number' ? options.activeLevel : null;
+
       // Storey explode.
       for (const level of levelGroups) {
         const target = level.baseY + level.index * options.explode * floorHeight * 1.25;
@@ -627,14 +679,39 @@ export function HolographicPlanViewer({
         });
       }
 
+      // Storey isolation: the chosen floor holds full strength while the rest
+      // fade to a faint frame, so the stack still reads as one building.
+      levelMaterials.forEach((materials, index) => {
+        const factor = isolated === null || isolated === index ? 1 : 0.09;
+        for (const material of materials.all) {
+          const base = Number(material.userData.baseOpacity ?? 1);
+          const target = base * factor;
+          if ((material as THREE.ShaderMaterial).isShaderMaterial) {
+            const uniform = (material as THREE.ShaderMaterial).uniforms.uOpacity;
+            uniform.value += (target - uniform.value) * 0.16;
+          } else {
+            material.opacity += (target - material.opacity) * 0.16;
+          }
+        }
+      });
+
       for (const sprite of labelSprites) {
         const level = Number(sprite.userData.level || 0);
         // Stacked storeys would bury the model in text, so upper-floor labels
-        // only appear once the user pulls the storeys apart.
-        sprite.visible = options.showLabels && (level === 0 || options.explode > 0.15);
+        // only appear once the user isolates a storey or pulls the stack apart.
+        sprite.visible =
+          options.showLabels &&
+          (isolated === null ? level === 0 || options.explode > 0.15 : level === isolated);
         sprite.position.y =
           level * floorHeight + floorHeight * 0.55 + level * options.explode * floorHeight * 1.25;
       }
+
+      // Ease the orbit target up to the isolated storey so it fills the frame.
+      const focusTargetY =
+        isolated === null
+          ? modelHeight * 0.38
+          : (levelGroups[isolated]?.group.position.y ?? 0) + floorHeight * 0.5;
+      focus.y += (focusTargetY - focus.y) * 0.08;
 
       for (const beacon of beacons) {
         beacon.group.visible = options.showMarkers;

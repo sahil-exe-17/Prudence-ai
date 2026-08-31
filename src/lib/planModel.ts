@@ -673,6 +673,34 @@ export function markersFromAnalysis(
     });
 }
 
+/** Storey name as an architect writes it: ground floor, then first, second… */
+export function levelLabel(level: number) {
+  if (level === 0) return 'GF';
+  return `${level}F`;
+}
+
+/**
+ * Per-storey breakdown backing the storey selector. One entry per level, even
+ * when a level traced empty, so the selector never skips a floor.
+ */
+export function levelStats(model: PlanModel) {
+  return Array.from({ length: model.levels }, (_, level) => {
+    const rooms = model.rooms.filter((room) => room.level === level);
+    const walls = model.walls.filter((wall) => wall.level === level);
+    const openings = model.openings.filter((opening) => opening.level === level);
+    return {
+      level,
+      label: levelLabel(level),
+      area: rooms.reduce((sum, room) => sum + room.area, 0),
+      rooms: rooms.length,
+      walls: walls.length,
+      openings: openings.length,
+      /** Height of this storey's slab above ground, in metres. */
+      elevation: level * model.floorHeight,
+    };
+  });
+}
+
 export function planStats(model: PlanModel) {
   const groundRooms = model.rooms.filter((room) => room.level === 0);
   const builtUp = groundRooms.reduce((sum, room) => sum + room.area, 0);
