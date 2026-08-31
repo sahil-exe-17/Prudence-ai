@@ -1245,6 +1245,87 @@ def plan_facts_response(payload: dict) -> dict:
     return result
 
 
+def build_geometry_prompt(payload: dict, hints: dict, insist_floor_plan: bool) -> str:
+    """Prompt for tracing a building out of an architectural sheet.
+
+    A sheet is almost never one drawing: it is a SITE PLAN, one or more FLOOR
+    PLANS, ELEVATIONS and SECTIONS laid out side by side. Without being told
+    which panel to trace, the model follows the site plan's building outline
+    and returns a hollow four-wall box with no rooms or openings. The panel
+    selection below is therefore the load-bearing part of this prompt.
+    """
+    escalation = ""
+    if insist_floor_plan:
+        escalation = (
+            "IMPORTANT — a previous attempt on this same sheet returned only a bare outline with no "
+            "interior partitions, which means the SITE PLAN was traced by mistake. Do not do that "
+            "again. Locate the panel that shows ROOMS INSIDE THE BUILDING and trace that one. A "
+            "correct floor-plan trace has many interior walls and several rooms, not four walls. "
+        )
+
+    return (
+        "You are PRUDENCE, a CAD vectorisation engine. This image is ONE architectural sheet that "
+        "usually contains SEVERAL SEPARATE DRAWINGS (panels) laid out side by side. "
+        + escalation +
+        "STEP 1 — Identify every panel and its type. Panels carry a caption such as 'SITE PLAN', "
+        "'TYPICAL FLOOR PLAN', 'GROUND FLOOR PLAN', 'FRONT ELEVATION' or 'SECTION AA', usually "
+        "directly above or below the drawing. "
+        "STEP 2 — Choose exactly ONE panel to trace: the FLOOR PLAN. That is the panel showing the "
+        "INTERIOR layout — room subdivisions, room names, door swings, window openings, staircase "
+        "and lift cores, and internal dimension strings. "
+        "  * If several floor plans are shown, trace the most detailed typical floor. "
+        "  * NEVER trace the SITE PLAN. It shows only the building outline sitting inside the plot "
+        "boundary, and tracing it yields a hollow box with no rooms — that is a failed read. "
+        "  * NEVER trace an ELEVATION or SECTION. Those are vertical views, not plans. "
+        "  * Only if the sheet genuinely contains no floor plan at all, trace the site plan's "
+        "building footprint, and set sourcePanel to say so. "
+        "STEP 3 — Report the caption of the panel you traced in 'sourcePanel'. "
+        "STEP 4 — Trace the chosen panel. Work in METRES. Use a coordinate system whose origin is the "
+        "TOP-LEFT corner of that panel's BUILDING FOOTPRINT, x increasing right, y increasing down. "
+        "Do NOT try to place the building inside the plot yourself — report footprint-local "
+        "coordinates and the setbacks separately; PRUDENCE positions it. "
+        "Read printed dimension strings and the panel's own scale (each panel may have a different "
+        "scale, e.g. site 1:250 but floor plan 1:100) to recover real metre values. If no scale is "
+        "printed, infer it from a door leaf (0.9 m) or a parking bay (2.5 m x 5.0 m) and lower "
+        "'confidence' accordingly. "
+        "Trace every wall as a straight centre-line segment. Walls on the building outline are "
+        "'exterior'; partitions between rooms are 'interior'. Give each wall a level index from 0. "
+        "For rooms, return the closed polygon of the internal face in the same coordinates, with the "
+        "printed room name. "
+        "For openings, 'wall' is the 0-based index into the walls array and 't' is the position along "
+        "that wall from 0 at (x1,y1) to 1 at (x2,y2). Mark door swings as 'door' and window symbols "
+        "as 'window'. "
+        "Use the OTHER panels ONLY for context, never for wall geometry: the SITE PLAN gives "
+        "plot.width, plot.depth and the four setbacks; an ELEVATION or SECTION gives 'levels' and "
+        "'floorHeight'; an AREA STATEMENT cross-checks your areas. "
+        "Return STRICT JSON only, with this exact schema: " + PLAN_GEOMETRY_SCHEMA + " "
+        "Rules: a real floor plan has interior walls — if you emit fewer than 6 walls or zero rooms, "
+        "re-examine the sheet, you have probably picked the wrong panel. Use 0.23 m as default "
+        "exterior wall thickness and 0.115 m for partitions, and 3.0 m floor height if none is "
+        "printed. Put caveats in 'notes'. "
+        "If the sheet is not a building drawing at all, return {\"walls\": []}. "
+        f"Known values from the compliance report (prefer these when they conflict): {json.dumps(hints)} "
+        f"File metadata: {json.dumps({k: payload.get(k) for k in ['filename', 'size', 'mimeType']})}"
+    )
+
+
+def looks_like_site_plan_outline(model: dict) -> bool:
+    """True when a result has the signature of a mis-traced site plan.
+
+    A floor plan always has interior partitions. A bare rectangle with no rooms
+    and no openings means the site plan's building outline was traced instead.
+    """
+    if not isinstance(model, dict):
+        return False
+    walls = model.get("walls")
+    if not isinstance(walls, list) or not walls:
+        return False
+    rooms = model.get("rooms") if isinstance(model.get("rooms"), list) else []
+    openings = model.get("openings") if isinstance(model.get("openings"), list) else []
+    interior = [w for w in walls if isinstance(w, dict) and w.get("kind") == "interior"]
+    return len(walls) <= 6 and len(interior) == 0 and len(rooms) <= 1 and len(openings) == 0
+
+
 PLAN_GEOMETRY_SCHEMA = (
     '{"plot": {"width": number, "depth": number}, '
     '"setbacks": {"front": number, "rear": number, "left": number, "right": number}, '
@@ -1254,7 +1335,7 @@ PLAN_GEOMETRY_SCHEMA = (
     '"rooms": [{"name": string, "polygon": [[number, number]], "level": number}], '
     '"openings": [{"type": "door|window", "wall": number, "t": number, '
     '"width": number, "height": number, "sill": number, "level": number}], '
-    '"notes": [string], "confidence": number}'
+    '"sourcePanel": string, "notes": [string], "confidence": number}'
 )
 
 
@@ -1284,56 +1365,47 @@ def gemini_plan_geometry(payload: dict) -> dict:
         return {"error": f"Geometry extraction needs an image or PDF, got {mime_type or 'unknown type'}"}
 
     hints = payload.get("hints") or {}
-    prompt = (
-        "You are PRUDENCE, a CAD vectorisation engine. Convert this 2D architectural drawing "
-        "(floor plan, site plan, or elevation sheet) into 3D building geometry. "
-        "Work in METRES. Use a coordinate system whose origin is the TOP-LEFT corner of the plot, "
-        "with x increasing to the right and y increasing downwards, exactly matching the image. "
-        "Read the printed dimension strings and the drawing scale to recover real metre values; "
-        "if no scale is printed, infer it from a known reference such as a door leaf (0.9 m) or a "
-        "standard parking bay (2.5 m x 5.0 m), and lower your confidence accordingly. "
-        "Trace every wall you can see as a straight centre-line segment. Mark walls on the building "
-        "outline as 'exterior' and partitions as 'interior'. Give each wall a level index starting at 0. "
-        "For rooms, return the closed polygon of the internal face in the same coordinates. "
-        "For openings, 'wall' is the 0-based index into the walls array and 't' is the position along "
-        "that wall from 0 at (x1,y1) to 1 at (x2,y2). "
-        "Return STRICT JSON only, with this exact schema: " + PLAN_GEOMETRY_SCHEMA + " "
-        "Rules: emit at least 4 walls if any structure is visible; never return coordinates outside the "
-        "plot; use 0.23 m as default exterior wall thickness and 0.115 m for partitions; "
-        "use 3.0 m floor height if none is printed. Set 'confidence' between 0 and 1 to describe how "
-        "reliable your scale recovery was, and put any caveats in 'notes'. "
-        "If the sheet is not a building drawing at all, return {\"walls\": []}. "
-        f"Known values from the compliance report (prefer these when they conflict with your read): {json.dumps(hints)} "
-        f"File metadata: {json.dumps({k: payload.get(k) for k in ['filename', 'size', 'mimeType']})}"
-    )
-
-    body = {
-        "contents": [{
-            "parts": [
-                {"text": prompt},
-                {"inline_data": {"mime_type": mime_type, "data": encoded_data}},
-            ]
-        }],
-        "generationConfig": {
-            "temperature": 0.0,
-            "maxOutputTokens": 8192,
-            "responseMimeType": "application/json",
-        },
-    }
-
     model = os.environ.get("PRUDENCE_GEMINI_MODEL") or "gemini-3.1-flash-lite"
-    request = urllib.request.Request(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
-        data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
 
-    try:
+    def attempt(insist: bool) -> dict:
+        body = {
+            "contents": [{
+                "parts": [
+                    {"text": build_geometry_prompt(payload, hints, insist_floor_plan=insist)},
+                    {"inline_data": {"mime_type": mime_type, "data": encoded_data}},
+                ]
+            }],
+            "generationConfig": {
+                "temperature": 0.0,
+                "maxOutputTokens": 8192,
+                "responseMimeType": "application/json",
+            },
+        }
+        request = urllib.request.Request(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
         with urllib.request.urlopen(request, timeout=180) as response:
             data = json.loads(response.read().decode("utf-8"))
         text = data["candidates"][0]["content"]["parts"][0]["text"]
-        parsed = strip_json_text(text)
+        return strip_json_text(text)
+
+    try:
+        parsed = attempt(insist=False)
+        # A hollow four-wall box means the site plan was traced. One retry that
+        # names the mistake recovers the floor plan on most multi-panel sheets.
+        if looks_like_site_plan_outline(parsed):
+            retried = attempt(insist=True)
+            if not looks_like_site_plan_outline(retried):
+                retried.setdefault("notes", []).append(
+                    "First pass traced the site-plan outline; re-traced against the floor plan panel."
+                )
+                return {"model": retried, "provider": f"Gemini ({model})", "retried": True}
+            parsed.setdefault("notes", []).append(
+                "Only a building outline was recoverable — no floor plan panel was legible on this sheet."
+            )
         return {"model": parsed, "provider": f"Gemini ({model})"}
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")

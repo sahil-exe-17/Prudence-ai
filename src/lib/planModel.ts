@@ -51,6 +51,8 @@ export type PlanMarker = {
 
 export type PlanModel = {
   source: 'ai' | 'synthetic';
+  /** Caption of the sheet panel that was traced, e.g. "TYPICAL FLOOR PLAN". */
+  sourcePanel: string;
   providerMessage: string;
   confidence: number;
   units: 'm';
@@ -82,6 +84,7 @@ export const PLAN_SCHEMA_PROMPT = `{
   "walls": [{"x1": number, "y1": number, "x2": number, "y2": number, "thickness": number, "height": number, "level": number, "kind": "exterior|interior"}],
   "rooms": [{"name": string, "polygon": [[number, number]], "level": number}],
   "openings": [{"type": "door|window", "wall": number, "t": number, "width": number, "height": number, "sill": number, "level": number}],
+  "sourcePanel": string,
   "notes": [string],
   "confidence": number
 }`;
@@ -285,10 +288,32 @@ export function normalizePlanModel(
     right: clamp(finite(input.setbacks?.right, hints.setbacks?.right ?? 2), 0, 30),
   };
 
+  const footprintWidth = bounds.maxX - bounds.minX;
+  const footprintDepth = bounds.maxY - bounds.minY;
+
+  // The vision model traces one panel and reports footprint-local coordinates,
+  // so the building must be placed inside the plot here. Anchoring the
+  // footprint's top-left to (left, front) setback is exactly what a setback
+  // means, and it also repairs a model that happened to answer in some other
+  // frame — panel pixels, or an origin of its own choosing.
   const plot = {
-    width: plotWidth > 1 ? plotWidth : bounds.maxX - bounds.minX + setbacks.left + setbacks.right,
-    depth: plotDepth > 1 ? plotDepth : bounds.maxY - bounds.minY + setbacks.front + setbacks.rear,
+    width: plotWidth > 1 ? plotWidth : footprintWidth + setbacks.left + setbacks.right,
+    depth: plotDepth > 1 ? plotDepth : footprintDepth + setbacks.front + setbacks.rear,
   };
+
+  // Never let the traced footprint overflow the plot it sits in.
+  plot.width = Math.max(plot.width, footprintWidth + setbacks.left + setbacks.right);
+  plot.depth = Math.max(plot.depth, footprintDepth + setbacks.front + setbacks.rear);
+
+  const offsetX = setbacks.left - bounds.minX;
+  const offsetY = setbacks.front - bounds.minY;
+
+  for (const wall of walls) {
+    wall.x1 += offsetX;
+    wall.x2 += offsetX;
+    wall.y1 += offsetY;
+    wall.y2 += offsetY;
+  }
 
   const rooms: PlanRoom[] = (Array.isArray(input.rooms) ? input.rooms : [])
     .map((room: any, index: number) => {
@@ -297,7 +322,9 @@ export function normalizePlanModel(
           if (Array.isArray(point)) return { x: finite(point[0], NaN), y: finite(point[1], NaN) };
           return { x: finite(point?.x, NaN), y: finite(point?.y, NaN) };
         })
-        .filter((point: Vec2) => Number.isFinite(point.x) && Number.isFinite(point.y));
+        .filter((point: Vec2) => Number.isFinite(point.x) && Number.isFinite(point.y))
+        // Same footprint-to-plot placement applied to the walls above.
+        .map((point: Vec2) => ({ x: point.x + offsetX, y: point.y + offsetY }));
       if (points.length < 3) return null;
       return {
         name: String(room?.name || `Room ${index + 1}`).slice(0, 28),
@@ -329,8 +356,32 @@ export function normalizePlanModel(
     })
     .filter(Boolean) as PlanOpening[];
 
+  // A sheet shows ONE "typical floor plan" and states the storey count
+  // separately, so the trace comes back entirely on level 0. Repeating that
+  // plate up the building is what the drawing actually means — otherwise every
+  // upper storey renders as a bare slab.
+  const occupiedLevels = new Set(walls.map((wall) => wall.level));
+  if (levels > 1 && occupiedLevels.size === 1 && occupiedLevels.has(0)) {
+    const baseWalls = [...walls];
+    const baseRooms = [...rooms];
+    const baseOpenings = [...openings];
+
+    for (let level = 1; level < levels; level += 1) {
+      // Captured before pushing, so opening.wall can be re-based onto the copy.
+      const wallOffset = walls.length;
+      for (const wall of baseWalls) walls.push({ ...wall, level });
+      for (const room of baseRooms) {
+        rooms.push({ ...room, polygon: room.polygon.map((point) => ({ ...point })), level });
+      }
+      for (const opening of baseOpenings) {
+        openings.push({ ...opening, wall: wallOffset + opening.wall, level });
+      }
+    }
+  }
+
   return {
     source: 'ai',
+    sourcePanel: String(input.sourcePanel || 'Floor plan').slice(0, 48),
     providerMessage: options.providerMessage || 'Vision model geometry',
     confidence: clamp(finite(input.confidence, 0.75), 0, 1),
     units: 'm',
@@ -564,6 +615,7 @@ export function synthesizePlanModel(seed: string, hints: PlanHints = {}): PlanMo
 
   return {
     source: 'synthetic',
+    sourcePanel: 'Derived envelope',
     providerMessage:
       'Deterministic geometry engine — envelope, setbacks and partitions derived locally from the plot and rule data.',
     confidence: 0.45,
