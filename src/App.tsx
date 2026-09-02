@@ -39,6 +39,7 @@ import {
   ZoomIn,
   ZoomOut,
   AlertTriangle,
+  FileWarning,
   HelpCircle,
   XCircle,
 } from 'lucide-react';
@@ -53,9 +54,11 @@ import { EvidenceLedger } from './components/EvidenceLedger';
 import {
   markersFromAnalysis,
   normalizePlanModel,
+  planHintsFromFacts,
   synthesizePlanModel,
   type PlanModel,
 } from './lib/planModel';
+import { buildCorrectedPlan } from './lib/remediation';
 import {
   evaluateCompliance,
   mergeFacts,
@@ -64,9 +67,125 @@ import {
 } from './lib/complianceEngine';
 import type { PackId, PlanFacts } from './lib/complianceKnowledgeBase';
 import { factsFromGeometry, factsFromText, factsFromVision } from './lib/factExtraction';
-import { readDrawingLocally, type DrawingRead, type ReadSource } from './lib/localReader';
+import {
+  readDrawingLocally,
+  renderPdfPageToUrl,
+  type DrawingRead,
+  type ReadSource,
+} from './lib/localReader';
 
 /** How each on-device read strategy is described in the evidence ledger. */
+/** Everything one sheet contributes. Shared by the first upload and later ones. */
+type SheetRead = {
+  facts: PlanFacts;
+  notes: string[];
+  provider: string;
+  localRead: DrawingRead;
+  visionModel: PlanModel | null;
+  sheetText: string;
+};
+
+async function postJson(path: string, body: unknown) {
+  try {
+    const response = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    // Offline or no local API server — the deterministic path still runs.
+    return null;
+  }
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve((event.target?.result as string) || '');
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read the file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Reads one sheet three independent ways — cloud vision, cloud geometry and the
+ * on-device reader — and merges them into a fact set.
+ *
+ * Extracted from the upload effect so a drawing set can be assembled one sheet
+ * at a time: a floor plan alone carries almost no statutory data, so the
+ * operator has to be able to add the site plan and area statement to it.
+ */
+async function readSheet(
+  file: File,
+  objectUrl: string,
+  onStage: (stage: string, fraction: number) => void
+): Promise<SheetRead> {
+  const base64 = await fileToDataUrl(file);
+  const request = {
+    filename: file.name,
+    size: file.size,
+    mimeType: file.type,
+    type: file.type,
+    base64,
+  };
+
+  const [factsResponse, geometryResponse, localRead] = await Promise.all([
+    postJson('/api/extract-facts', request),
+    postJson('/api/extract-plan', { ...request, hints: {} }),
+    readDrawingLocally(file, objectUrl, onStage),
+  ]);
+
+  const visionModel = geometryResponse?.model
+    ? normalizePlanModel(geometryResponse.model, {
+        providerMessage: geometryResponse.provider || 'Vision geometry',
+      })
+    : null;
+
+  // The server's own text read wins when it has one (a real PDF text layer
+  // beats OCR); otherwise the on-device read supplies the corpus.
+  const serverText = String(factsResponse?.sheetText || '');
+  const sheetText = serverText.trim().length >= localRead.characters ? serverText : localRead.text;
+
+  let facts: PlanFacts = factsFromText(sheetText);
+  // Only a genuine vision trace may feed statutory facts. Synthesised geometry
+  // is a visual aid, not evidence about this building.
+  if (visionModel) facts = mergeFacts(facts, factsFromGeometry(visionModel));
+  if (factsResponse?.facts) facts = mergeFacts(facts, factsFromVision(factsResponse.facts));
+
+  const usedLocalRead = sheetText === localRead.text && localRead.characters > 0;
+  const notes: string[] = [];
+  if (localRead.note) notes.push(localRead.note);
+  if (factsResponse?.error) notes.push(factsResponse.error);
+  if (factsResponse?.textExtractionNote && !usedLocalRead) notes.push(factsResponse.textExtractionNote);
+  if (!factsResponse) {
+    notes.push('Cloud fact extraction unreachable — the on-device reader was used instead.');
+  }
+
+  // `facts: {}` comes back whenever the vision reader is unconfigured, and an
+  // empty object is truthy — so count the keys, or the ledger credits the
+  // vision extractor for work the on-device reader actually did.
+  const visionFactCount = Object.keys(factsResponse?.facts || {}).length;
+  const provider =
+    visionFactCount > 0
+      ? factsResponse.provider || 'Vision extractor'
+      : usedLocalRead
+      ? LOCAL_READ_LABELS[localRead.source]
+      : 'Local deterministic engine';
+
+  return { facts, notes, provider, localRead, visionModel, sheetText };
+}
+
+/** Facts carrying a real reading, ignoring absent-by-default booleans. */
+function countReadFacts(facts: PlanFacts) {
+  return Object.values(facts).filter((fact) => {
+    if (!fact) return false;
+    if (typeof fact.value === 'boolean') return fact.value === true;
+    return typeof fact.value === 'number' && Number.isFinite(fact.value) && fact.value > 0;
+  }).length;
+}
+
 const LOCAL_READ_LABELS: Record<ReadSource, string> = {
   'pdf-text': 'On-device PDF text layer',
   'pdf-ocr': 'On-device OCR (scanned PDF)',
@@ -184,6 +303,19 @@ function App() {
   }, [theme]);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
+  /**
+   * A displayable raster of the sheet. For an image upload this is the file
+   * itself; for a PDF it is the current page rendered by pdf.js. Both the 2D
+   * preview and the hologram's ground projection need a real bitmap.
+   */
+  const [sheetImageUrl, setSheetImageUrl] = useState('');
+  const [sheetPageCount, setSheetPageCount] = useState(1);
+  /**
+   * Rasterising a large PDF page takes a moment. Without a distinct pending
+   * state the preview announced "sheet cannot be displayed" while the render
+   * was still in flight.
+   */
+  const [sheetStatus, setSheetStatus] = useState<'idle' | 'rendering' | 'ready' | 'failed'>('idle');
   const [analysis, setAnalysis] = useState<Analysis>(emptyAnalysis);
   const [state, setState] = useState<AnalysisState>('idle');
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
@@ -199,9 +331,13 @@ function App() {
   const [engineNotes, setEngineNotes] = useState<string[]>([]);
   const [report, setReport] = useState<ComplianceReport | null>(null);
   const [isSampleData, setIsSampleData] = useState(false);
+  /** Every sheet that has contributed evidence, in upload order. */
+  const [sheetSet, setSheetSet] = useState<
+    { name: string; provider: string; factCount: number }[]
+  >([]);
+  const extraSheetInputRef = useRef<HTMLInputElement | null>(null);
 
   // 3D reconstruction of the uploaded 2D sheet.
-  const [fileData, setFileData] = useState('');
   const [planModel, setPlanModel] = useState<PlanModel | null>(null);
   const [planStatus, setPlanStatus] = useState<'idle' | 'building' | 'ready'>('idle');
   const [holoOptions, setHoloOptions] = useState<HoloOptions>({
@@ -212,7 +348,21 @@ function App() {
     autoRotate: true,
     explode: 0,
     activeLevel: null,
+    // Both buildings are shown from the outset: the correction is the point of
+    // the audit, and hiding it behind a toggle meant it went unseen.
+    overlayMode: 'side-by-side',
   });
+
+  /**
+   * The compliant envelope for the current model and report.
+   *
+   * Derived, never stored: it always reflects the report on screen, so the
+   * correction cannot drift from the verdict that produced it.
+   */
+  const correctedPlan = useMemo(
+    () => (planModel ? buildCorrectedPlan(planModel, report, planFacts) : null),
+    [planModel, report, planFacts]
+  );
 
   const [selectedRuleId, setSelectedRuleId] = useState<string>('GH-DCR-01');
   const [ruleFilter, setRuleFilter] = useState<'ALL' | 'PASS' | 'FAIL'>('ALL');
@@ -335,19 +485,41 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userText,
-          history: updatedHistory.map(m => ({ role: m.role, content: m.content })),
+          // The prior turns only. `userText` is sent separately, so passing the
+          // updated history here delivered the question twice.
+          history: chatMessages.map(m => ({ role: m.role, content: m.content })),
           analysis: analysis
         })
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setChatMessages(prev => [...prev, { role: 'assistant', content: data.response || 'No response generated.' }]);
+      const data = response.ok ? await response.json() : null;
+
+      // The local server answers 200 even when the provider call failed, so the
+      // error field has to be checked explicitly, not just the status.
+      if (data?.response) {
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
       } else {
-        setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward or seek planning relaxation under Section 14.' }]);
+        const detail = data?.error || `Request failed (HTTP ${response.status})`;
+        setChatMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `**I could not answer that** — the assistant backend is unavailable.\n\n\`${detail}\`\n\nStart the API server with \`npm run dev\` and confirm \`GROQ_API_KEY\` or \`GEMINI_API_KEY\` is set in \`.env\`.`,
+          },
+        ]);
       }
     } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Front setback deficit identified under BBMP 2026 bylaws. Recommended action: Adjust front building line by shifting column grid 1.2m inward.' }]);
+      // A fabricated answer here previously looked like a real finding. Never
+      // invent compliance advice when the model was never reached.
+      setChatMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `**I could not reach the assistant backend.**\n\n\`${
+            err instanceof Error ? err.message : String(err)
+          }\`\n\nIs the API server running? Start both processes with \`npm run dev\`.`,
+        },
+      ]);
     } finally {
       setIsSendingChat(false);
     }
@@ -520,8 +692,8 @@ function App() {
       setPreviewUrl('');
       setAnalysis({ ...emptyAnalysis, jurisdiction: activeJurisdiction.label });
       setState('idle');
-      setFileData('');
       setPlanModel(null);
+      setSheetSet([]);
       setPlanStatus('idle');
       setScanStage(null);
       setDrawingRead(null);
@@ -533,111 +705,144 @@ function App() {
     setState('analyzing');
 
     let isCancelled = false;
-    const reader = new FileReader();
 
-    reader.onload = async (e) => {
-      if (isCancelled) return;
-      const base64 = (e.target?.result as string) || '';
-      setFileData(base64);
+    (async () => {
       setPlanStatus('building');
-
-      const request = {
-        filename: file.name,
-        size: file.size,
-        mimeType: file.type,
-        type: file.type,
-        base64,
-      };
-
-      const post = async (path: string, body: unknown) => {
-        try {
-          const response = await fetch(path, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-          if (!response.ok) return null;
-          return await response.json();
-        } catch {
-          // Offline or no local API server — the deterministic path still runs.
-          return null;
-        }
-      };
-
-      // Facts, geometry and the on-device read are independent reads of the
-      // same sheet, so they run concurrently.
-      const [factsResponse, geometryResponse, localRead] = await Promise.all([
-        post('/api/extract-facts', request),
-        post('/api/extract-plan', { ...request, hints: {} }),
-        readDrawingLocally(file, url, (stage, fraction) => {
+      try {
+        const read = await readSheet(file, url, (stage, fraction) => {
           if (!isCancelled) setScanStage({ label: stage, fraction });
-        }),
-      ]);
-      if (isCancelled) return;
-      setScanStage(null);
+        });
+        if (isCancelled) return;
+        setScanStage(null);
 
-      /* ---- 3D model ---- */
-      const seed = `${file.name}:${file.size}`;
-      const visionModel = geometryResponse?.model
-        ? normalizePlanModel(geometryResponse.model, {
-            providerMessage: geometryResponse.provider || 'Vision geometry',
-          })
-        : null;
-      const model = visionModel ?? synthesizePlanModel(seed);
+        /* ---- 3D model ---- */
+        // Built after the facts so the fallback generator can be pinned to the
+        // plot, storey count and setbacks actually read off the sheet. Otherwise
+        // the hologram shows an invented building whose coverage, FSI and height
+        // contradict the report rendered beside it.
+        const model =
+          read.visionModel ??
+          synthesizePlanModel(`${file.name}:${file.size}`, planHintsFromFacts(read.facts, read.sheetText));
 
-      /* ---- Facts, weakest source first ---- */
-      // The server's own text read wins when it has one (a real PDF text layer
-      // beats OCR); otherwise the on-device read supplies the corpus.
-      const serverText = String(factsResponse?.sheetText || '');
-      const sheetText = serverText.trim().length >= localRead.characters ? serverText : localRead.text;
+        setDrawingRead(read.localRead);
+        setSheetSet([
+          { name: file.name, provider: read.provider, factCount: countReadFacts(read.facts) },
+        ]);
+        applyFacts(read.facts, {
+          documentName: file.name,
+          documentSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+          provider: read.provider,
+          notes: read.notes,
+        });
 
-      let facts: PlanFacts = factsFromText(sheetText);
-      // Only a genuine vision trace may feed statutory facts. Synthesised
-      // geometry is a visual aid, not evidence about this building.
-      if (visionModel) facts = mergeFacts(facts, factsFromGeometry(visionModel));
-      if (factsResponse?.facts) facts = mergeFacts(facts, factsFromVision(factsResponse.facts));
-
-      const usedLocalRead = sheetText === localRead.text && localRead.characters > 0;
-      const notes: string[] = [];
-      if (localRead.note) notes.push(localRead.note);
-      if (factsResponse?.error) notes.push(factsResponse.error);
-      if (factsResponse?.textExtractionNote && !usedLocalRead) {
-        notes.push(factsResponse.textExtractionNote);
+        setPlanModel(model);
+        setPlanStatus('ready');
+        setState('complete');
+      } catch {
+        if (isCancelled) return;
+        setScanStage(null);
+        setPlanStatus('idle');
+        setState('complete');
       }
-      if (!factsResponse) {
-        notes.push('Cloud fact extraction unreachable — the on-device reader was used instead.');
-      }
-
-      // `facts: {}` comes back whenever the vision reader is unconfigured, and
-      // an empty object is truthy — so count the keys, or the ledger credits
-      // the vision extractor for work the on-device reader actually did.
-      const visionFactCount = Object.keys(factsResponse?.facts || {}).length;
-      const provider = visionFactCount > 0
-        ? factsResponse.provider || 'Vision extractor'
-        : usedLocalRead
-        ? LOCAL_READ_LABELS[localRead.source]
-        : 'Local deterministic engine';
-
-      setDrawingRead(localRead);
-      applyFacts(facts, {
-        documentName: file.name,
-        documentSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        provider,
-        notes,
-      });
-
-      setPlanModel(model);
-      setPlanStatus('ready');
-      setState('complete');
-    };
-
-    reader.readAsDataURL(file);
+    })();
 
     return () => {
       isCancelled = true;
       URL.revokeObjectURL(url);
     };
   }, [file]);
+
+  /**
+   * Merges an additional sheet into the current fact set.
+   *
+   * A floor plan carries almost no statutory data; the setbacks live on the
+   * site plan and the areas on the area statement. Rather than making the
+   * operator re-upload a combined file, each extra sheet contributes its own
+   * reading and the strongest source per fact wins.
+   */
+  const addSheet = async (extra?: File) => {
+    if (!extra || !file) return;
+    const url = URL.createObjectURL(extra);
+    setScanStage({ label: `Reading ${extra.name}`, fraction: 0 });
+    try {
+      const read = await readSheet(extra, url, (stage, fraction) =>
+        setScanStage({ label: stage, fraction })
+      );
+      const merged = mergeFacts(planFacts, read.facts);
+      setSheetSet((prev) => [
+        ...prev,
+        { name: extra.name, provider: read.provider, factCount: countReadFacts(read.facts) },
+      ]);
+      applyFacts(merged, {
+        documentName: analysis.documentName,
+        documentSize: analysis.documentSize,
+        provider: `${factProvider} + ${read.provider}`,
+        notes: [...engineNotes, ...read.notes],
+      });
+      // A later sheet often supplies the plot and storey count the first one
+      // lacked, so the fallback model is rebuilt against the fuller fact set.
+      if (planModel?.source === 'synthetic') {
+        setPlanModel(
+          synthesizePlanModel(`${file.name}:${file.size}`, planHintsFromFacts(merged, read.sheetText))
+        );
+      }
+    } finally {
+      setScanStage(null);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  /**
+   * Produces the displayable bitmap of the sheet.
+   *
+   * An image upload can be shown directly. A PDF cannot — it has to be
+   * rasterised first, or the preview falls through to a placeholder graphic and
+   * the operator sees a drawing that is not theirs.
+   */
+  useEffect(() => {
+    if (!file) {
+      setSheetImageUrl('');
+      setSheetPageCount(1);
+      setSheetStatus('idle');
+      return;
+    }
+
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      setSheetImageUrl(previewUrl);
+      setSheetPageCount(1);
+      setSheetStatus(previewUrl ? 'ready' : 'failed');
+      return;
+    }
+
+    let isCancelled = false;
+    let created = '';
+    setSheetStatus('rendering');
+
+    renderPdfPageToUrl(file, currentPage)
+      .then(({ url, pageCount }) => {
+        if (isCancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        created = url;
+        setSheetImageUrl(url);
+        setSheetPageCount(pageCount);
+        setSheetStatus('ready');
+      })
+      .catch(() => {
+        // An unrenderable PDF leaves no bitmap; the preview says so rather
+        // than showing a stand-in drawing.
+        if (isCancelled) return;
+        setSheetImageUrl('');
+        setSheetStatus('failed');
+      });
+
+    return () => {
+      isCancelled = true;
+      if (created) URL.revokeObjectURL(created);
+    };
+  }, [file, previewUrl, currentPage]);
 
   /** Re-evaluates in place when the operator changes jurisdiction or rule packs. */
   useEffect(() => {
@@ -712,6 +917,19 @@ function App() {
         type="file"
         accept="application/pdf,image/*,.dwg,.dxf"
         onChange={onInputChange}
+      />
+
+      {/* Additional sheets merge into the current audit rather than replacing it. */}
+      <input
+        ref={extraSheetInputRef}
+        className="hidden"
+        type="file"
+        accept="application/pdf,image/*"
+        onChange={(event) => {
+          const next = event.target.files?.[0];
+          event.target.value = '';
+          void addSheet(next);
+        }}
       />
 
       <div className={`flex flex-col h-full ${isNavigating ? 'view-transition-exit' : 'view-transition-enter'}`}>
@@ -793,8 +1011,21 @@ function App() {
 
           {/* Main Workspace - Fixed height, two independent scroll panels */}
           <main className="flex flex-1 overflow-hidden flex-col lg:flex-row">
-            {/* Left Panel - scrollable independently */}
-            <section className="flex flex-1 flex-col gap-3 p-4 min-w-0 overflow-y-auto">
+            {/* Left Panel - scrollable independently.
+                In 3D the model takes the whole stage: the padding, gaps and
+                scrolling all go, so the canvas can fill the viewport. */}
+            <section
+              className={
+                is3D
+                  ? 'flex flex-1 flex-col min-w-0 overflow-hidden'
+                  : 'flex flex-1 flex-col gap-3 p-4 min-w-0 overflow-y-auto'
+              }
+            >
+              {/* Page chrome — title, scan status, jurisdiction and rule packs.
+                  All of it is suppressed in 3D so nothing competes with the
+                  model; the in-canvas overlays carry the controls instead. */}
+              {!is3D && (
+                <>
               {/* Subheader & Kicker */}
               <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#f26a3d]">
@@ -898,6 +1129,8 @@ function App() {
                   </label>
                 </div>
               </div>
+                </>
+              )}
 
               {/* Drawing Canvas Container (Full Size & Spacious Min-Height) */}
               <div
@@ -908,11 +1141,16 @@ function App() {
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={onDrop}
-                className="relative flex-1 min-h-[520px] sm:min-h-[580px] card-prudence cad-grid-bg overflow-hidden flex flex-col rounded-lg shadow-xl"
+                className={`relative flex-1 cad-grid-bg overflow-hidden flex flex-col ${
+                  is3D
+                    ? 'min-h-0 border-0 rounded-none shadow-none bg-[#08090a]'
+                    : 'min-h-[520px] sm:min-h-[580px] card-prudence rounded-lg shadow-xl'
+                }`}
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
               >
-                {/* Canvas Sub-toolbar */}
+                {/* Canvas Sub-toolbar — 2D only. */}
+                {!is3D && (
                 <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#111416]/80 px-4 py-2 z-20 flex-wrap gap-2">
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-[10px] text-[#8c999c] uppercase font-bold">
@@ -973,6 +1211,7 @@ function App() {
                     </button>
                   </div>
                 </div>
+                )}
 
                 {/* Canvas Drawing Surface (Dynamic Height Fitting Viewport) */}
                 <div
@@ -1011,6 +1250,8 @@ function App() {
                         <DrawingPreview
                           file={file}
                           previewUrl={previewUrl}
+                          sheetUrl={sheetImageUrl}
+                          sheetStatus={sheetStatus}
                           imageRef={imageRef}
                           annotationsVisible={annotationsVisible}
                           is3D={is3D}
@@ -1046,7 +1287,7 @@ function App() {
                       {planModel ? (
                         <HolographicPlanViewer
                           model={planModel}
-                          blueprintUrl={previewUrl}
+                          blueprintUrl={sheetImageUrl}
                           showBlueprint={holoOptions.blueprint}
                           showLabels={holoOptions.labels}
                           showMarkers={holoOptions.markers}
@@ -1054,6 +1295,8 @@ function App() {
                           autoRotate={holoOptions.autoRotate}
                           explode={holoOptions.explode}
                           activeLevel={holoOptions.activeLevel}
+                          corrected={correctedPlan}
+                          overlayMode={holoOptions.overlayMode}
                         />
                       ) : (
                         <HoloBuildingState status={planStatus} />
@@ -1064,6 +1307,7 @@ function App() {
                           model={planModel}
                           options={holoOptions}
                           onChange={(next) => setHoloOptions((prev) => ({ ...prev, ...next }))}
+                          corrected={correctedPlan}
                         />
                       )}
                     </div>
@@ -1093,7 +1337,10 @@ function App() {
                   )}
                 </div>
 
-                {/* Bottom Interactive Controls Bar */}
+                {/* Bottom Interactive Controls Bar — zoom, pan and the ruler
+                    act on the 2D sheet only, so they are hidden in 3D where
+                    the orbit controls take over. */}
+                {!is3D && (
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded-full bg-[#111416]/95 border border-[rgba(255,255,255,0.15)] px-2 py-1 backdrop-blur-md shadow-2xl">
                   {/* Zoom Out */}
                   <button
@@ -1155,11 +1402,18 @@ function App() {
                     <Ruler size={16} />
                   </button>
                 </div>
+                )}
               </div>
             </section>
 
             {/* Right Panel - scrollable independently */}
-            <aside className="w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex flex-col gap-5 overflow-y-auto">
+            <aside
+              // The compliance report is hidden in 3D. It stays mounted so its
+              // scroll position and the selected rule survive the round trip.
+              className={`w-full lg:w-[440px] xl:w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[#08090a] p-5 flex-col gap-5 overflow-y-auto ${
+                is3D ? 'hidden' : 'flex'
+              }`}
+            >
               {/* BOLD & SPACIOUS STATUTORY COMPLIANCE RADAR CARD */}
               <div className="shrink-0 rounded-2xl border-2 border-[#f26a3d]/50 bg-[#111416] p-5 flex flex-col gap-4 relative overflow-hidden shadow-2xl hover:border-[#f26a3d] transition-all duration-300">
                 {/* Ambient Background Radial Glow */}
@@ -1271,7 +1525,17 @@ function App() {
                 </div>
               </div>
 
-              {report && <EvidenceLedger report={report} provider={factProvider} notes={engineNotes} isSample={isSampleData} />}
+              {report && (
+                <EvidenceLedger
+                  report={report}
+                  provider={factProvider}
+                  notes={engineNotes}
+                  isSample={isSampleData}
+                  facts={planFacts}
+                  sheetSet={sheetSet}
+                  onAddSheet={file ? () => extraSheetInputRef.current?.click() : undefined}
+                />
+              )}
 
               {/* STATUTORY REGULATION AUDIT CENTER PANEL */}
               <div className="flex flex-col gap-3">
@@ -2493,6 +2757,8 @@ function RulePins({
 function DrawingPreview({
   file,
   previewUrl,
+  sheetUrl,
+  sheetStatus,
   imageRef,
   annotationsVisible,
   is3D,
@@ -2503,6 +2769,8 @@ function DrawingPreview({
 }: {
   file: File;
   previewUrl: string;
+  sheetUrl: string;
+  sheetStatus: 'idle' | 'rendering' | 'ready' | 'failed';
   imageRef: React.RefObject<HTMLImageElement | null>;
   annotationsVisible: boolean;
   is3D: boolean;
@@ -2511,14 +2779,14 @@ function DrawingPreview({
   analysis: Analysis;
   onSelectRule: (rule: RuleResult) => void;
 }) {
-  const isImage = file.type.startsWith('image/') && previewUrl && file.size > 0;
-
-  if (isImage) {
+  // `sheetUrl` is the uploaded bitmap for an image, or the pdf.js-rendered page
+  // for a PDF. Either way it is the operator's actual drawing.
+  if (sheetUrl && file.size > 0) {
     return (
       <div className="relative inline-flex items-center justify-center max-h-[calc(100vh-230px)] max-w-full">
         <img
           ref={imageRef}
-          src={previewUrl}
+          src={sheetUrl}
           alt={file.name}
           className="max-h-[calc(100vh-230px)] w-auto max-w-full block border border-[rgba(255,255,255,0.2)] rounded bg-[#08090a] shadow-2xl object-contain"
         />
@@ -2535,18 +2803,33 @@ function DrawingPreview({
     );
   }
 
-  return (
-    <div className="relative inline-block w-full h-full max-h-[620px]">
-      <CadBlueprintGraphic filename={file.name} />
+  if (sheetStatus === 'rendering') {
+    return (
+      <div className="flex h-full w-full max-w-md flex-col items-center justify-center gap-3 text-center">
+        <Loader2 size={26} className="animate-spin text-[#f26a3d]" />
+        <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[#81b7c2]">
+          Rasterising sheet…
+        </p>
+      </div>
+    );
+  }
 
-      {annotationsVisible && !is3D && (
-        <RulePins
-          rules={analysis.ruleResults}
-          currentPage={currentPage}
-          selectedRuleId={selectedRuleId}
-          onSelectRule={onSelectRule}
-        />
-      )}
+  // No bitmap — a PDF that would not rasterise, or a file type the browser
+  // cannot decode. Previously this showed a generic stand-in blueprint, which
+  // read as "your drawing, analysed" when it was neither.
+  return (
+    <div className="flex h-full w-full max-w-md flex-col items-center justify-center gap-3 rounded border border-[rgba(255,255,255,0.15)] bg-[#08090a] p-8 text-center">
+      <FileWarning size={30} className="text-[#f26a3d]" />
+      <p className="font-mono text-[12px] font-bold uppercase tracking-[0.15em] text-[#f4f0e8]">
+        Sheet cannot be displayed
+      </p>
+      <p className="font-mono text-[11px] leading-relaxed text-[#8c999c]">
+        <span className="text-[#81b7c2]">{file.name}</span> could not be rendered in the browser.
+        Statutory checks still run against whatever text was read from it — see the evidence ledger.
+      </p>
+      <p className="font-mono text-[10px] text-[#5f6c70]">
+        Upload a PDF or a PNG/JPG of the sheet for a visual audit.
+      </p>
     </div>
   );
 }

@@ -6,11 +6,17 @@ import {
   type PlanModel,
   type PlanWall,
 } from '../lib/planModel';
+import type { CorrectedPlan } from '../lib/remediation';
 
 const BRAND = 0xf26a3d;
 const CYAN = 0x81b7c2;
 const CRITICAL = 0xff4d3d;
 const PASS = 0x27c93f;
+/** Compliant geometry reads green throughout the product. */
+const COMPLIANT = 0x27c93f;
+
+/** Which building the viewer is showing. */
+export type OverlayMode = 'as-drawn' | 'corrected' | 'both' | 'side-by-side';
 
 type ViewerProps = {
   model: PlanModel;
@@ -25,6 +31,9 @@ type ViewerProps = {
   explode?: number;
   /** Storey to isolate — the rest ghost back. null shows the whole stack. */
   activeLevel?: number | null;
+  /** Compliant envelope to draw against the as-drawn building. */
+  corrected?: CorrectedPlan | null;
+  overlayMode?: OverlayMode;
   className?: string;
 };
 
@@ -192,6 +201,8 @@ export function HolographicPlanViewer({
   autoRotate = true,
   explode = 0,
   activeLevel = null,
+  corrected = null,
+  overlayMode = 'as-drawn',
   className,
 }: ViewerProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -206,6 +217,7 @@ export function HolographicPlanViewer({
     explode,
     showBlueprint,
     activeLevel,
+    overlayMode,
   });
   optionsRef.current = {
     showLabels,
@@ -215,6 +227,7 @@ export function HolographicPlanViewer({
     explode,
     showBlueprint,
     activeLevel,
+    overlayMode,
   };
 
   useEffect(() => {
@@ -508,6 +521,7 @@ export function HolographicPlanViewer({
     const ringGeometry = track(new THREE.RingGeometry(0.5, 0.72, 40));
     const beamGeometry = track(new THREE.CylinderGeometry(0.07, 0.07, 1, 12, 1, true));
 
+    let criticalOrdinal = 0;
     model.markers.forEach((marker, index) => {
       const color = marker.severity === 'PASS' ? PASS : marker.severity === 'CRITICAL' ? CRITICAL : BRAND;
       const group = new THREE.Group();
@@ -545,24 +559,217 @@ export function HolographicPlanViewer({
       beam.position.y = beamHeight / 2;
       group.add(beam);
 
-      const label = makeLabelSprite(
-        `${marker.id} ${marker.label}`.slice(0, 34),
-        marker.severity === 'PASS' ? '#27c93f' : '#f26a3d',
-        labelHeight * 1.15
-      );
-      if (label) {
-        label.position.y = beamHeight + 0.7;
-        group.add(label);
-        disposables.push(label.material);
+      // Only the critical pins carry text. Every marker used to be labelled at
+      // the same height, so a dozen findings stacked into one unreadable band
+      // across the model. The rest still show their ring and beam, and the full
+      // list lives in the audit panel.
+      if (marker.severity === 'CRITICAL') {
+        const label = makeLabelSprite(
+          `${marker.id} ${marker.label}`.slice(0, 34),
+          '#ff4d3d',
+          labelHeight * 1.15
+        );
+        if (label) {
+          // Staggered so adjacent criticals do not overlap either.
+          label.position.y = beamHeight + 0.7 + (criticalOrdinal % 3) * labelHeight * 1.5;
+          criticalOrdinal += 1;
+          group.add(label);
+          disposables.push(label.material);
+        }
       }
 
       root.add(group);
       beacons.push({ group, phase: index * 0.7 });
     });
 
-    /* --- camera framing & orbit controls ----------------------------- */
+    /* --- compliant envelope ----------------------------------------- */
+
+    // The building the bylaws permit, drawn against the one that was submitted.
+    // Rendered as an envelope rather than a full wall set: the statutory limit
+    // is a volume, and inventing partitions inside it would imply a layout the
+    // engine never derived.
+    const correctedGroup = new THREE.Group();
+    correctedGroup.visible = false;
+    root.add(correctedGroup);
+
+    const correctedLabels: THREE.Sprite[] = [];
+    /** "AS DRAWN" / "LEGAL LIMIT" headings, only meaningful when set apart. */
+    const sideBySideTitles: THREE.Sprite[] = [];
+
+    if (corrected) {
+      const { footprint, height: envelopeHeight } = corrected.envelope;
+      const centre = toWorld(footprint.x + footprint.width / 2, footprint.y + footprint.depth / 2);
+
+      // The corrected BUILDING, not a bounding box: the same walls, rooms and
+      // storeys as the submission, moved inside the statutory setbacks. A plain
+      // box read as an unrelated volume and hid what actually has to change.
+      const correctedSolid = track(makeHoloMaterial(COMPLIANT, 0xdfffe6, 0.6));
+      const correctedFill = track(makeHoloMaterial(COMPLIANT, 0xffffff, 0.16));
+      holoMaterials.push(correctedSolid, correctedFill);
+      const correctedEdge = track(makeEdgeMaterial(COMPLIANT, 0.9));
+
+      const fixed = corrected.building;
+      const fixedOpenings = new Map<number, { t: number; width: number; height: number; sill: number }[]>();
+      for (const opening of fixed.openings) {
+        const list = fixedOpenings.get(opening.wall) || [];
+        list.push(opening);
+        fixedOpenings.set(opening.wall, list);
+      }
+
+      for (let level = 0; level < fixed.levels; level += 1) {
+        const storey = new THREE.Group();
+        storey.position.y = level * fixed.floorHeight;
+        correctedGroup.add(storey);
+
+        // Floor slab, sized to the walls standing on it.
+        const storeyWalls = fixed.walls.filter((wall) => wall.level === level);
+        if (storeyWalls.length) {
+          const b = storeyWalls.reduce(
+            (acc, wall) => ({
+              minX: Math.min(acc.minX, wall.x1, wall.x2),
+              minY: Math.min(acc.minY, wall.y1, wall.y2),
+              maxX: Math.max(acc.maxX, wall.x1, wall.x2),
+              maxY: Math.max(acc.maxY, wall.y1, wall.y2),
+            }),
+            { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+          );
+          const slab = new THREE.Mesh(unitBox, correctedFill);
+          slab.scale.set(
+            Math.max(0.5, b.maxX - b.minX) + 0.3,
+            0.1,
+            Math.max(0.5, b.maxY - b.minY) + 0.3
+          );
+          const slabCentre = toWorld((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2);
+          slab.position.set(slabCentre.x, 0.05, slabCentre.z);
+          storey.add(slab);
+        }
+
+        for (const wall of storeyWalls) {
+          const wallIdx = fixed.walls.indexOf(wall);
+          const angle = Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1);
+          const start = toWorld(wall.x1, wall.y1);
+          const dirX = Math.cos(angle);
+          const dirZ = Math.sin(angle);
+
+          for (const piece of wallSlabs(wall, fixedOpenings.get(wallIdx) || [])) {
+            const centreU = piece.u + piece.du / 2;
+            const mesh = new THREE.Mesh(unitBox, correctedSolid);
+            mesh.scale.set(piece.du, piece.dv, wall.thickness);
+            mesh.position.set(
+              start.x + dirX * centreU,
+              0.1 + piece.v + piece.dv / 2,
+              start.z + dirZ * centreU
+            );
+            mesh.rotation.y = -angle;
+            storey.add(mesh);
+
+            const edge = new THREE.LineSegments(unitEdges, correctedEdge);
+            edge.scale.copy(mesh.scale);
+            edge.position.copy(mesh.position);
+            edge.rotation.y = mesh.rotation.y;
+            storey.add(edge);
+          }
+        }
+      }
+
+      // Its own plot boundary, so that when the two buildings are set out side
+      // by side the corrected one still reads as standing on the same plot
+      // rather than floating beside the drawing.
+      correctedGroup.add(new THREE.Line(rectLoop(0, 0, plot.width, plot.depth, 0.012), outlineMaterial));
+
+      // Compliant building line on the ground, so the inset reads in plan too.
+      const compliantLineMaterial = track(
+        new THREE.LineDashedMaterial({
+          color: COMPLIANT,
+          transparent: true,
+          opacity: 0.95,
+          dashSize: 0.5,
+          gapSize: 0.28,
+        })
+      );
+      const compliantLine = new THREE.Line(
+        rectLoop(footprint.x, footprint.y, footprint.width, footprint.depth, 0.04),
+        compliantLineMaterial
+      );
+      compliantLine.computeLineDistances();
+      correctedGroup.add(compliantLine);
+
+      // One label per side that actually has to move, plus the height cap.
+      const { inset } = corrected.impact;
+      const sideLabels: { side: keyof typeof inset; x: number; y: number }[] = [
+        { side: 'front', x: footprint.x + footprint.width / 2, y: footprint.y },
+        { side: 'rear', x: footprint.x + footprint.width / 2, y: footprint.y + footprint.depth },
+        { side: 'left', x: footprint.x, y: footprint.y + footprint.depth / 2 },
+        { side: 'right', x: footprint.x + footprint.width, y: footprint.y + footprint.depth / 2 },
+      ];
+
+      for (const item of sideLabels) {
+        const distance = inset[item.side];
+        if (distance <= 0.005) continue;
+        const sprite = makeLabelSprite(
+          `${item.side.toUpperCase()}  -${distance.toFixed(2)}m`,
+          '#27c93f',
+          Math.min(1.4, Math.max(0.55, Math.max(plot.width, plot.depth) * 0.028))
+        );
+        if (!sprite) continue;
+        const world = toWorld(item.x, item.y);
+        sprite.position.set(world.x, 1.1, world.z);
+        correctedGroup.add(sprite);
+        correctedLabels.push(sprite);
+        disposables.push(sprite.material);
+      }
+
+      // Which building is which. Only shown when both are set out separately,
+      // where there is no shared outline to make the pairing obvious.
+      const legalTitle = makeLabelSprite(
+        'LEGAL LIMIT',
+        '#27c93f',
+        Math.min(1.9, Math.max(0.8, Math.max(plot.width, plot.depth) * 0.04))
+      );
+      if (legalTitle) {
+        const world = toWorld(plot.width / 2, plot.depth / 2);
+        legalTitle.position.set(world.x, Math.max(envelopeHeight, 1) + 2.4, world.z);
+        correctedGroup.add(legalTitle);
+        sideBySideTitles.push(legalTitle);
+        disposables.push(legalTitle.material);
+      }
+
+      if (corrected.impact.levelsRemoved > 0) {
+        const sprite = makeLabelSprite(
+          `HEIGHT CAP  ${envelopeHeight.toFixed(2)}m  (-${corrected.impact.levelsRemoved} storey)`,
+          '#27c93f',
+          Math.min(1.4, Math.max(0.55, Math.max(plot.width, plot.depth) * 0.028))
+        );
+        if (sprite) {
+          sprite.position.set(centre.x, envelopeHeight + 0.9, centre.z);
+          correctedGroup.add(sprite);
+          correctedLabels.push(sprite);
+          disposables.push(sprite.material);
+        }
+      }
+    }
 
     const modelHeight = levels * floorHeight;
+
+    if (corrected) {
+      const asDrawnTitle = makeLabelSprite(
+        'AS DRAWN',
+        '#f26a3d',
+        Math.min(1.9, Math.max(0.8, Math.max(plot.width, plot.depth) * 0.04))
+      );
+      if (asDrawnTitle) {
+        const world = toWorld(plot.width / 2, plot.depth / 2);
+        asDrawnTitle.position.set(world.x, modelHeight + 2.4, world.z);
+        root.add(asDrawnTitle);
+        sideBySideTitles.push(asDrawnTitle);
+        disposables.push(asDrawnTitle.material);
+      }
+    }
+
+    /* --- camera framing & orbit controls ----------------------------- */
+
+    /** Gap between the two plots when they are set out side by side. */
+    const sideBySideOffset = plot.width * 1.35;
 
     /**
      * Distance that fits the model's bounding sphere in both axes. Plots are
@@ -586,6 +793,9 @@ export function HolographicPlanViewer({
       targetRadius: radiusBase,
     };
     const focus = new THREE.Vector3(0, modelHeight * 0.38, 0);
+    /** Horizontal look-at target, eased so a mode switch is not a jump cut. */
+    let focusTargetX = 0;
+    let lastMode = '';
 
     const applyCamera = () => {
       orbit.theta += (orbit.targetTheta - orbit.theta) * 0.12;
@@ -679,10 +889,35 @@ export function HolographicPlanViewer({
         });
       }
 
+      // With the corrected envelope up front, the as-drawn building steps back
+      // so the two are distinguishable; "corrected" alone hides it entirely.
+      const mode = corrected ? options.overlayMode : 'as-drawn';
+      correctedGroup.visible = mode !== 'as-drawn';
+      // Side by side, both buildings are set apart on their own plots, so
+      // neither has to be faded to stay legible.
+      const sideBySide = mode === 'side-by-side';
+      const asDrawnFactor = mode === 'corrected' ? 0 : mode === 'both' ? 0.4 : 1;
+
+      // Slide the corrected plot clear of the drawn one, and label both.
+      const targetOffset = sideBySide ? sideBySideOffset : 0;
+      correctedGroup.position.x += (targetOffset - correctedGroup.position.x) * 0.12;
+      for (const title of sideBySideTitles) title.visible = sideBySide;
+
+      // Reframe once per mode change: two plots need a wider shot, and the
+      // camera should look between them rather than at the drawn one.
+      if (mode !== lastMode) {
+        lastMode = mode;
+        radiusBase = fitRadius() * (sideBySide ? 1.6 : 1);
+        orbit.targetRadius = radiusBase;
+        focusTargetX = sideBySide ? sideBySideOffset / 2 : 0;
+      }
+      focus.x += (focusTargetX - focus.x) * 0.08;
+
       // Storey isolation: the chosen floor holds full strength while the rest
       // fade to a faint frame, so the stack still reads as one building.
       levelMaterials.forEach((materials, index) => {
-        const factor = isolated === null || isolated === index ? 1 : 0.09;
+        const factor =
+          asDrawnFactor * (isolated === null || isolated === index ? 1 : 0.09);
         for (const material of materials.all) {
           const base = Number(material.userData.baseOpacity ?? 1);
           const target = base * factor;
@@ -701,6 +936,7 @@ export function HolographicPlanViewer({
         // only appear once the user isolates a storey or pulls the stack apart.
         sprite.visible =
           options.showLabels &&
+          mode !== 'corrected' &&
           (isolated === null ? level === 0 || options.explode > 0.15 : level === isolated);
         sprite.position.y =
           level * floorHeight + floorHeight * 0.55 + level * options.explode * floorHeight * 1.25;
@@ -763,7 +999,7 @@ export function HolographicPlanViewer({
       renderer.dispose();
       if (container.contains(element)) container.removeChild(element);
     };
-  }, [model, blueprintUrl]);
+  }, [model, blueprintUrl, corrected]);
 
   return <div ref={mountRef} className={className ?? 'absolute inset-0 h-full w-full'} />;
 }

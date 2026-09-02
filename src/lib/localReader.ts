@@ -87,10 +87,48 @@ async function renderPdfPage(document: any, pageNumber: number): Promise<HTMLCan
   const canvas = window.document.createElement('canvas');
   canvas.width = Math.min(4000, Math.floor(viewport.width));
   canvas.height = Math.min(4000, Math.floor(viewport.height));
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('2D canvas unavailable');
-  await page.render({ canvas, canvasContext: context, viewport }).promise;
+  if (!canvas.getContext('2d')) throw new Error('2D canvas unavailable');
+
+  // Pass `canvas` ALONE. pdf.js 6 treats `canvasContext` as a legacy path that
+  // requires `canvas: null`; supplying both leaves the render task's
+  // continuation loop unresolved, so `.promise` never settles on any page that
+  // needs more than one chunk. The page still paints, which is why this looked
+  // like a blank preview rather than an error.
+  await page.render({ canvas, viewport }).promise;
   return canvas;
+}
+
+/**
+ * Rasterises one page of a PDF to a blob URL for display.
+ *
+ * A PDF cannot be shown in an `<img>` and cannot be decoded by
+ * THREE.TextureLoader, so without this a PDF upload has no sheet to render —
+ * neither in the 2D preview nor as the hologram's ground projection.
+ *
+ * Returns the page count too, so the caller can drive sheet navigation.
+ * The caller owns the returned URL and must revoke it.
+ */
+export async function renderPdfPageToUrl(
+  file: File,
+  pageNumber = 1
+): Promise<{ url: string; width: number; height: number; pageCount: number }> {
+  const pdfjs = await loadPdfjs();
+  const buffer = await file.arrayBuffer();
+  const document = await pdfjs.getDocument({ data: buffer }).promise;
+  const page = Math.min(Math.max(1, pageNumber), document.numPages);
+  const canvas = await renderPdfPage(document, page);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((result) => resolve(result), 'image/png')
+  );
+  if (!blob) throw new Error('Could not encode the rendered PDF page');
+
+  return {
+    url: URL.createObjectURL(blob),
+    width: canvas.width,
+    height: canvas.height,
+    pageCount: document.numPages,
+  };
 }
 
 /* ------------------------------------------------------------------ *

@@ -1,5 +1,18 @@
-import { Box, ChevronDown, ChevronUp, Eye, Grid3x3, Layers, Map, RotateCw, Tag } from 'lucide-react';
+import {
+  Box,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Grid3x3,
+  Layers,
+  Map,
+  RotateCw,
+  Tag,
+  Wand2,
+} from 'lucide-react';
 import { levelStats, planStats, type PlanModel } from '../lib/planModel';
+import type { CorrectedPlan } from '../lib/remediation';
+import type { OverlayMode } from './HolographicPlanViewer';
 
 export type HoloOptions = {
   labels: boolean;
@@ -10,6 +23,8 @@ export type HoloOptions = {
   explode: number;
   /** Isolated storey index, or null for the whole stack. */
   activeLevel: number | null;
+  /** Whether the compliant envelope is shown against the as-drawn building. */
+  overlayMode: OverlayMode;
 };
 
 /** Materialising / reconstruction placeholder shown before geometry arrives. */
@@ -66,10 +81,12 @@ export function HoloOverlay({
   model,
   options,
   onChange,
+  corrected,
 }: {
   model: PlanModel;
   options: HoloOptions;
   onChange: (next: Partial<HoloOptions>) => void;
+  corrected?: CorrectedPlan | null;
 }) {
   const stats = planStats(model);
   const storeys = levelStats(model);
@@ -160,6 +177,41 @@ export function HoloOverlay({
             label="Spin"
           />
         </div>
+
+        {/* Corrected-envelope switch. Only offered when there is a fix to show. */}
+        {corrected && (
+          <div className="rounded-lg border border-[#27c93f]/40 bg-[#08090a]/90 p-1.5 backdrop-blur-md">
+            <div className="mb-1 flex items-center gap-1.5 px-0.5">
+              <Wand2 size={11} className="text-[#27c93f]" />
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#27c93f]">
+                Corrected envelope
+              </span>
+            </div>
+            <div className="flex gap-1">
+              {(
+                [
+                  ['side-by-side', 'Compare'],
+                  ['both', 'Overlay'],
+                  ['as-drawn', 'As drawn'],
+                  ['corrected', 'Legal'],
+                ] as [OverlayMode, string][]
+              ).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => onChange({ overlayMode: mode })}
+                  className={`rounded-md border px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider transition ${
+                    options.overlayMode === mode
+                      ? 'border-[#27c93f] bg-[#27c93f]/15 text-[#27c93f]'
+                      : 'border-[rgba(255,255,255,0.12)] text-[#8c999c] hover:border-[#27c93f] hover:text-[#27c93f]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Storey selector — the stack drawn top-down, as on a section sheet. */}
         <div className="rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#08090a]/90 p-1.5 backdrop-blur-md">
@@ -253,6 +305,55 @@ export function HoloOverlay({
           )}
         </div>
       </div>
+
+      {/* What compliance actually requires, and what it costs. */}
+      {corrected && options.overlayMode !== 'as-drawn' && (
+        <div className="absolute bottom-14 right-3 z-30 max-w-[19rem] rounded-lg border border-[#27c93f]/40 bg-[#08090a]/92 px-3 py-2.5 backdrop-blur-md">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#27c93f]">
+            Required corrections
+          </p>
+
+          <ul className="mt-2 space-y-1.5">
+            {corrected.corrections
+              .filter((item) => item.geometric)
+              .slice(0, 6)
+              .map((item) => (
+                <li key={item.ruleId} className="font-mono text-[10px] leading-relaxed">
+                  <span className="text-[#f4f0e8]">{item.title}</span>
+                  {item.delta !== undefined && (
+                    <span className="ml-1 font-bold text-[#27c93f]">
+                      {item.kind === 'height' || item.kind === 'fsi' || item.kind === 'coverage'
+                        ? `-${item.delta.toFixed(2)}${item.unit === 'm' ? ' m' : ` ${item.unit}`}`
+                        : `${item.delta.toFixed(2)} m inward`}
+                    </span>
+                  )}
+                  <span className="block text-[#5f6c70]">{item.clause}</span>
+                </li>
+              ))}
+          </ul>
+
+          <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-[rgba(255,255,255,0.08)] pt-2 font-mono text-[10px]">
+            {[
+              ['Footprint', `-${corrected.impact.footprintLost.toFixed(0)} m²`],
+              ['Built-up', `-${corrected.impact.builtUpLost.toFixed(0)} m²`],
+              ['Storeys', `-${corrected.impact.levelsRemoved}`],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="uppercase tracking-wide text-[#5f6c70]">{label}</dt>
+                <dd className="font-bold text-[#f4f0e8]">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {corrected.advisories.length > 0 && (
+            <p className="mt-2 font-mono text-[9px] leading-relaxed text-[#8c999c]">
+              {corrected.advisories.length} further violation
+              {corrected.advisories.length === 1 ? '' : 's'} cannot be fixed by geometry alone
+              (parking, disclosures, clear widths) — see the audit list.
+            </p>
+          )}
+        </div>
+      )}
 
       {model.notes.length > 0 && (
         <div className="absolute bottom-14 left-3 z-30 max-w-[22rem] pointer-events-none">

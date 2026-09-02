@@ -1,6 +1,7 @@
-import { AlertTriangle, Fingerprint, FlaskConical, ScanLine } from 'lucide-react';
+import { AlertTriangle, FilePlus2, Fingerprint, FlaskConical, ScanLine } from 'lucide-react';
 import type { ComplianceReport } from '../lib/complianceEngine';
-import { FACT_LABELS } from '../lib/complianceKnowledgeBase';
+import { FACT_LABELS, type PlanFacts } from '../lib/complianceKnowledgeBase';
+import { describeUploadedSheet, sheetsThatWouldHelp } from '../lib/sheetGuidance';
 
 /**
  * Shows how the verdict was reached: which engine ran, what evidence was
@@ -13,13 +14,20 @@ export function EvidenceLedger({
   provider,
   notes,
   isSample,
+  facts,
+  sheetSet = [],
+  onAddSheet,
 }: {
   report: ComplianceReport;
   provider: string;
   notes: string[];
   isSample: boolean;
+  facts: PlanFacts;
+  sheetSet?: { name: string; provider: string; factCount: number }[];
+  onAddSheet?: () => void;
 }) {
   const { summary } = report;
+  const wanted = sheetsThatWouldHelp(facts, report.factsMissing);
 
   return (
     <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#111416] p-3.5 flex flex-col gap-3">
@@ -83,9 +91,61 @@ export function EvidenceLedger({
             ))}
           </div>
           <p className="font-mono text-[9px] leading-relaxed text-[#5f6c70]">
-            These checks are reported as unread rather than guessed. Add the dimension to the sheet, or upload a
-            drawing where it is legible, to have them evaluated.
+            These checks are reported as unread rather than guessed.
           </p>
+        </div>
+      )}
+
+      {/* Which sheet would close the gap. A floor plan simply does not carry
+          setbacks or areas, and saying so beats 21 unexplained chips. */}
+      {wanted.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-lg border border-[#81b7c2]/35 bg-[#08090a] p-2.5">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#81b7c2]">
+            Add these sheets to decide the rest
+          </span>
+
+          <p className="font-mono text-[9px] leading-relaxed text-[#8c999c]">
+            Read so far: <span className="font-bold text-[#f4f0e8]">{describeUploadedSheet(facts)}</span>. A
+            drawing set spreads its data across sheets — the checks below have no evidence on what was
+            uploaded.
+          </p>
+
+          <ul className="flex flex-col gap-1.5">
+            {wanted.map((sheet) => (
+              <li key={sheet.kind} className="font-mono text-[9px] leading-relaxed">
+                <span className="font-bold text-[#f26a3d]">{sheet.label}</span>
+                <span className="text-[#5f6c70]"> — {sheet.provides}</span>
+                <span className="block text-[#5f6c70]">
+                  unlocks {sheet.missing.length} check{sheet.missing.length === 1 ? '' : 's'}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {onAddSheet && (
+            <button
+              type="button"
+              onClick={onAddSheet}
+              className="flex items-center justify-center gap-1.5 rounded-md border border-[#81b7c2] px-2 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#81b7c2] transition hover:bg-[#81b7c2]/15"
+            >
+              <FilePlus2 size={11} />
+              Add another sheet
+            </button>
+          )}
+        </div>
+      )}
+
+      {sheetSet.length > 1 && (
+        <div className="flex flex-col gap-1">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#8c999c]">
+            Sheets in this audit ({sheetSet.length})
+          </span>
+          {sheetSet.map((sheet) => (
+            <p key={sheet.name} className="font-mono text-[9px] text-[#5f6c70]">
+              › <span className="text-[#f4f0e8]">{sheet.name}</span> — {sheet.factCount} measurement
+              {sheet.factCount === 1 ? '' : 's'} via {sheet.provider}
+            </p>
+          ))}
         </div>
       )}
 
