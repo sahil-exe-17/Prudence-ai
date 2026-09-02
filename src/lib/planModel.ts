@@ -65,6 +65,22 @@ export type PlanModel = {
   openings: PlanOpening[];
   markers: PlanMarker[];
   notes: string[];
+  /**
+   * Which envelope fields the vision model actually supplied, as opposed to
+   * values this module defaulted.
+   *
+   * Without this, a trace of a bare floor plan — which states no plot, no
+   * setbacks and no storey count — still produced "0.00 m front setback" and
+   * "1 storey at 3.00 m" as if they had been read off the sheet, and the engine
+   * turned those artefacts into CRITICAL violations. Facts may only be derived
+   * from geometry that was genuinely traced.
+   */
+  provided?: {
+    plot?: boolean;
+    setbacks?: boolean;
+    levels?: boolean;
+    floorHeight?: boolean;
+  };
 };
 
 export type PlanHints = {
@@ -73,6 +89,12 @@ export type PlanHints = {
   levels?: number;
   floorHeight?: number;
   setbacks?: Partial<PlanModel['setbacks']>;
+  /**
+   * Per-floor built-up area in m². The generator otherwise fills the whole
+   * buildable envelope on every storey, which overstates coverage and FSI
+   * against the areas printed on the sheet.
+   */
+  footprintArea?: number;
 };
 
 /** JSON schema handed to the vision model. Kept here so client and server agree. */
@@ -223,6 +245,71 @@ export function derivePlanHints(source: {
   return hints;
 }
 
+/**
+ * Builds generator hints from the extracted facts and the raw sheet text.
+ *
+ * Without this the fallback generator invents a plot, so a sheet stating
+ * "30 x 40 m, 10 floors" rendered as an unrelated 17.7 x 24.0 m three-storey
+ * block — and every derived metric on the hologram (coverage, FSI, height)
+ * disagreed with the compliance report sitting next to it.
+ *
+ * Facts outrank the text scrape: a fact has already been validated and carries
+ * provenance, whereas the scrape is a regex over the whole sheet.
+ */
+export function planHintsFromFacts(
+  facts: Record<string, { value?: unknown } | undefined>,
+  sheetText = ''
+): PlanHints {
+  const hints = derivePlanHints({ summary: sheetText });
+  hints.setbacks = hints.setbacks || {};
+
+  const num = (key: string) => {
+    const value = facts?.[key]?.value;
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  };
+
+  const levels = num('floors');
+  if (levels !== undefined && levels >= 1 && levels <= 12) hints.levels = Math.round(levels);
+
+  const height = num('buildingHeight');
+  if (height !== undefined && hints.levels) {
+    const perFloor = height / hints.levels;
+    if (perFloor >= 2.4 && perFloor <= 6) hints.floorHeight = perFloor;
+  }
+
+  const setbackKeys: [string, keyof PlanModel['setbacks']][] = [
+    ['frontSetback', 'front'],
+    ['rearSetback', 'rear'],
+    ['sideSetbackLeft', 'left'],
+    ['sideSetbackRight', 'right'],
+  ];
+  for (const [key, side] of setbackKeys) {
+    const value = num(key);
+    if (value !== undefined && value >= 0 && value <= 30) hints.setbacks[side] = value;
+  }
+
+  // A stated plot area with no printed width x depth still pins the footprint's
+  // scale. Assume the 3:4 proportion typical of an Indian residential plot.
+  const plotArea = num('plotArea');
+  if (plotArea && plotArea > 20 && !hints.plotWidth) {
+    const width = Math.sqrt(plotArea * 0.75);
+    hints.plotWidth = Math.round(width * 10) / 10;
+    hints.plotDepth = Math.round((plotArea / width) * 10) / 10;
+  }
+
+  // Prefer the stated ground coverage; otherwise spread the total built-up area
+  // over the storeys, so the model's own FSI matches the sheet's.
+  const footprintArea = num('footprintArea');
+  const builtUpArea = num('builtUpArea');
+  if (footprintArea && footprintArea > 5) {
+    hints.footprintArea = footprintArea;
+  } else if (builtUpArea && builtUpArea > 5 && hints.levels) {
+    hints.footprintArea = builtUpArea / hints.levels;
+  }
+
+  return hints;
+}
+
 /* ------------------------------------------------------------------ *
  * AI response normalisation
  * ------------------------------------------------------------------ */
@@ -242,6 +329,23 @@ export function normalizePlanModel(
   const hints = options.hints || {};
   const plotWidth = clamp(finite(input.plot?.width, hints.plotWidth ?? 0), 0, 500);
   const plotDepth = clamp(finite(input.plot?.depth, hints.plotDepth ?? 0), 0, 500);
+
+  // Recorded before any defaulting, so downstream fact derivation can tell a
+  // traced value from one this module invented.
+  const positive = (value: unknown) => Number.isFinite(Number(value)) && Number(value) > 0;
+  const provided = {
+    // Refined below once the footprint is known: a floor-plan-only trace
+    // reports the footprint's own extent as "plot", which is not a plot.
+    plot: positive(input.plot?.width) && positive(input.plot?.depth),
+    setbacks: ['front', 'rear', 'left', 'right'].some((side) =>
+      positive((input.setbacks as Record<string, unknown> | undefined)?.[side])
+    ),
+    // `levels: 1` is what the model returns when it saw a single floor plan and
+    // no elevation or section, so it cannot be read as "this is a 1-storey
+    // building". Only a count above one is a genuine observation.
+    levels: positive(input.levels) && Number(input.levels) > 1,
+    floorHeight: positive(input.floorHeight),
+  };
 
   const rawWalls: PlanWall[] = Array.isArray(input.walls) ? input.walls : [];
   const levels = clamp(Math.round(finite(input.levels, hints.levels ?? 1)), 1, 12);
@@ -300,6 +404,14 @@ export function normalizePlanModel(
     width: plotWidth > 1 ? plotWidth : footprintWidth + setbacks.left + setbacks.right,
     depth: plotDepth > 1 ? plotDepth : footprintDepth + setbacks.front + setbacks.rear,
   };
+
+  // A real plot is strictly bigger than the building standing on it. When the
+  // reported plot merely equals the traced footprint, the model was looking at
+  // a floor plan and echoed its extent back — so there is no plot reading here,
+  // and crediting one produced 100% ground coverage on every floor plan.
+  provided.plot =
+    provided.plot &&
+    (plotWidth > footprintWidth + 0.5 || plotDepth > footprintDepth + 0.5);
 
   // Never let the traced footprint overflow the plot it sits in.
   plot.width = Math.max(plot.width, footprintWidth + setbacks.left + setbacks.right);
@@ -394,6 +506,7 @@ export function normalizePlanModel(
     openings,
     markers: [],
     notes: (Array.isArray(input.notes) ? input.notes : []).map((note: any) => String(note).slice(0, 160)).slice(0, 8),
+    provided,
   };
 }
 
@@ -474,7 +587,9 @@ export function synthesizePlanModel(seed: string, hints: PlanHints = {}): PlanMo
   setbacks.front = Math.min(setbacks.front, maxDepthSetback);
   setbacks.rear = Math.min(setbacks.rear, maxDepthSetback);
 
-  const levels = clamp(hints.levels ?? 2 + Math.floor(random() * 2), 1, 8);
+  // Matches the 12-storey ceiling used by normalizePlanModel and derivePlanHints;
+  // a lower cap here silently rendered a 10-storey sheet as 8 storeys.
+  const levels = clamp(hints.levels ?? 2 + Math.floor(random() * 2), 1, 12);
   const floorHeight = hints.floorHeight ?? 3.1;
 
   const footprint: Rect = {
@@ -483,6 +598,21 @@ export function synthesizePlanModel(seed: string, hints: PlanHints = {}): PlanMo
     w: plot.width - setbacks.left - setbacks.right,
     h: plot.depth - setbacks.front - setbacks.rear,
   };
+
+  // Shrink to the stated built-up area, centred in the buildable envelope, so
+  // coverage and FSI on the hologram agree with the sheet's area statement.
+  if (hints.footprintArea && hints.footprintArea > 5) {
+    const envelopeArea = footprint.w * footprint.h;
+    if (envelopeArea > hints.footprintArea) {
+      const scale = Math.sqrt(hints.footprintArea / envelopeArea);
+      const width = footprint.w * scale;
+      const depth = footprint.h * scale;
+      footprint.x += (footprint.w - width) / 2;
+      footprint.y += (footprint.h - depth) / 2;
+      footprint.w = width;
+      footprint.h = depth;
+    }
+  }
 
   const walls: PlanWall[] = [];
   const rooms: PlanRoom[] = [];

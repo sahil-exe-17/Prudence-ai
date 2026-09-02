@@ -338,8 +338,14 @@ export function factsFromGeometry(model: PlanModel): PlanFacts {
   const facts: PlanFacts = {};
   const note = model.source === 'ai' ? 'vision-traced geometry' : 'derived geometry';
 
+  // A trace only supports a fact the vision model actually reported. Defaults
+  // applied while normalising are scaffolding for the hologram, not evidence:
+  // asserting them produced setback violations on sheets stating no setbacks.
+  // Absent provenance (older payloads) is treated as untraced, i.e. safe.
+  const provided = model.provided ?? {};
+
   const plotArea = round2(model.plot.width * model.plot.depth);
-  if (plotArea > 0) {
+  if (provided.plot && plotArea > 0) {
     facts.plotArea = {
       value: plotArea,
       unit: 'm2',
@@ -359,30 +365,39 @@ export function factsFromGeometry(model: PlanModel): PlanFacts {
       confidence: model.confidence,
       evidence: `${groundRooms.length} ground-floor spaces totalling ${footprint.toFixed(2)} m² from ${note}`,
     };
-    facts.builtUpArea = {
-      value: round2(footprint * model.levels),
-      unit: 'm2',
-      source: 'geometry',
-      confidence: model.confidence,
-      evidence: `${footprint.toFixed(2)} m² footprint × ${model.levels} storeys from ${note}`,
-    };
+    // Total built-up area needs a storey count. Multiplying by a defaulted
+    // `levels: 1` reports one traced floor as the whole building.
+    if (provided.levels) {
+      facts.builtUpArea = {
+        value: round2(footprint * model.levels),
+        unit: 'm2',
+        source: 'geometry',
+        confidence: model.confidence,
+        evidence: `${footprint.toFixed(2)} m² footprint × ${model.levels} storeys from ${note}`,
+      };
+    }
   }
 
-  facts.floors = {
-    value: model.levels,
-    unit: 'count',
-    source: 'geometry',
-    confidence: model.confidence,
-    evidence: `${model.levels} storeys in ${note}`,
-  };
+  // A single floor plan says nothing about how many storeys the building has.
+  if (provided.levels) {
+    facts.floors = {
+      value: model.levels,
+      unit: 'count',
+      source: 'geometry',
+      confidence: model.confidence,
+      evidence: `${model.levels} storeys in ${note}`,
+    };
 
-  facts.buildingHeight = {
-    value: round2(model.levels * model.floorHeight),
-    unit: 'm',
-    source: 'geometry',
-    confidence: model.confidence,
-    evidence: `${model.levels} storeys × ${model.floorHeight.toFixed(2)} m floor-to-floor from ${note}`,
-  };
+    if (provided.floorHeight) {
+      facts.buildingHeight = {
+        value: round2(model.levels * model.floorHeight),
+        unit: 'm',
+        source: 'geometry',
+        confidence: model.confidence,
+        evidence: `${model.levels} storeys × ${model.floorHeight.toFixed(2)} m floor-to-floor from ${note}`,
+      };
+    }
+  }
 
   const setbackPairs: [FactKey, number][] = [
     ['frontSetback', model.setbacks.front],
@@ -391,7 +406,9 @@ export function factsFromGeometry(model: PlanModel): PlanFacts {
     ['sideSetbackRight', model.setbacks.right],
   ];
   for (const [key, value] of setbackPairs) {
-    if (!Number.isFinite(value) || value < 0) continue;
+    // `>= 0` previously let a 0 through as "built to the boundary". On a trace
+    // with no plot boundary that is a non-read, and it became a CRITICAL fail.
+    if (!provided.setbacks || !Number.isFinite(value) || value <= 0) continue;
     facts[key] = {
       value: round2(value),
       unit: 'm',
