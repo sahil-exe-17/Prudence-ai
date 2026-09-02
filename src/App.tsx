@@ -73,6 +73,7 @@ import {
   type DrawingRead,
   type ReadSource,
 } from './lib/localReader';
+import { generateFormalPdfReport } from './lib/pdfReportGenerator';
 
 /** How each on-device read strategy is described in the evidence ledger. */
 /** Everything one sheet contributes. Shared by the first upload and later ones. */
@@ -896,14 +897,20 @@ function App() {
   };
 
   const exportReport = () => {
-    const payload = JSON.stringify({ ...analysis, exportedAt: new Date().toISOString() }, null, 2);
-    const blob = new Blob([payload], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `prudence-report-${analysis.documentName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    generateFormalPdfReport({
+      documentName: analysis.documentName,
+      documentSize: analysis.documentSize,
+      jurisdiction: analysis.jurisdiction,
+      score: analysis.score,
+      coverage: analysis.coverage,
+      risk: analysis.risk,
+      status: analysis.status,
+      summary: analysis.summary,
+      ruleResults: analysis.ruleResults,
+      violations: analysis.violations,
+      digest: report?.digest,
+      provider: factProvider,
+    });
   };
 
   const canAnalyze = Boolean(file);
