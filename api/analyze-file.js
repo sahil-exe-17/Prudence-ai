@@ -133,7 +133,7 @@ async function groqDocumentAnalysis(payload, fallback) {
   const apiKey = process.env.GROQ_API_KEY || process.env.PRUDENCE_GROQ_API_KEY;
   if (!apiKey) return fallback;
 
-  const model = process.env.PRUDENCE_GROQ_MODEL || process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const model = process.env.PRUDENCE_GROQ_MODEL || process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
   const prompt = [
     "You are PRUDENCE, an Indian construction compliance agent.",

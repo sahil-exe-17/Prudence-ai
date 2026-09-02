@@ -1429,7 +1429,7 @@ def groq_analysis(payload: dict) -> dict:
         "Use plausible Indian construction compliance checks for demo purposes."
     )
     body = {
-        "model": os.environ.get("PRUDENCE_GROQ_MODEL", "llama-3.3-70b-versatile"),
+        "model": os.environ.get("PRUDENCE_GROQ_MODEL", "openai/gpt-oss-120b"),
         "messages": [
             {"role": "system", "content": "You produce strict JSON only."},
             {"role": "user", "content": prompt},
@@ -1633,7 +1633,10 @@ class Handler(SimpleHTTPRequestHandler):
             if result.get("provider") == "Local fallback":
                 result = apply_rule_checks(result, payload)
         encoded = json.dumps(result).encode("utf-8")
-        self.send_response(200)
+        # A failed provider call is a failed request. Answering 200 with an
+        # error body made every client treat the failure as a valid reply.
+        status = 502 if (self.path == "/api/chat" and not result.get("response")) else 200
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
