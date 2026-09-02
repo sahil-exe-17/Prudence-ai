@@ -10,8 +10,10 @@ import {
   ShieldCheck, 
   Zap,
   Activity,
-  ArrowDown
+  ArrowDown,
+  Download
 } from 'lucide-react';
+import { generateFormalPdfReport } from '../lib/pdfReportGenerator';
 
 interface StepData {
   id: 1 | 2 | 3;
@@ -340,6 +342,19 @@ export function InteractiveWorkflowSimulator({ onLaunch }: { onLaunch?: () => vo
                             <div className="flex justify-between items-center text-[#8c999c] pt-2 border-t border-white/5 text-[10px]">
                               <span>SECURITY SIGNATURE:</span>
                               <span className="text-white/60">SHA-256 Verified ✓</span>
+                            </div>
+                            <div className="pt-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  generateFormalPdfReport();
+                                }}
+                                className="w-full py-2 px-3 rounded-lg bg-[#27c93f]/20 hover:bg-[#27c93f]/30 border border-[#27c93f]/40 text-[#27c93f] font-mono text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-[0_0_15px_rgba(39,201,63,0.2)]"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                Download Certified Audit PDF
+                              </button>
                             </div>
                           </>
                         )}

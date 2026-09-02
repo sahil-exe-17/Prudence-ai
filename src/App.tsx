@@ -1209,12 +1209,11 @@ function App() {
                     <button
                       type="button"
                       onClick={exportReport}
-                      disabled={!canAnalyze}
-                      className="btn-secondary text-xs h-7 disabled:opacity-40"
-                      title="Export Report"
+                      className="btn-secondary text-xs h-7 hover:border-[#81b7c2] hover:text-[#81b7c2] transition cursor-pointer"
+                      title="Export Formal PDF Report"
                     >
                       <Download size={13} />
-                      <span>Export Report</span>
+                      <span>Export Report (PDF)</span>
                     </button>
                   </div>
                 </div>
